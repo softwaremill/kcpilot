@@ -19,11 +19,43 @@ cargo build --release
 # The binary will be available at target/release/kafkapilot
 ```
 
-## Usage
+## Running from Source
 
-### Basic Scan
+You can run KafkaPilot directly from source using `cargo run`:
 
 ```bash
+# Run locally on bastion (no SSH required)
+cargo run --bin kafkapilot -- scan
+
+# Run remotely via SSH bastion
+cargo run --bin kafkapilot -- scan --bastion kafka-poligon
+
+# Specify custom output directory
+cargo run --bin kafkapilot -- scan --bastion kafka-poligon --output test-scan
+
+# Run with verbose logging
+RUST_LOG=kafkapilot=debug cargo run --bin kafkapilot -- scan --bastion kafka-poligon
+
+# Show help
+cargo run --bin kafkapilot -- --help
+
+# Show scan command help
+cargo run --bin kafkapilot -- scan --help
+
+# Show version and info
+cargo run --bin kafkapilot -- info
+```
+
+## Usage
+
+### Using the Compiled Binary
+
+After building with `cargo build --release`, you can use the binary directly:
+
+```bash
+# Add to PATH (optional)
+export PATH="$PATH:$(pwd)/target/release"
+
 # Scan locally (when running directly on the bastion)
 kafkapilot scan
 
