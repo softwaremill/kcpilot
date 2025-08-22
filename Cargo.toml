@@ -54,4 +54,11 @@ uuid = { version = "1.6", features = ["v4", "serde"] }
 md5 = "0.7"
 walkdir = "2.4"
 
+# LLM Integration
+reqwest = { version = "0.11", features = ["json", "rustls-tls"] }
+dotenv = "0.15"
+
+# OpenAI-specific
+async-openai = "0.23"
+
 

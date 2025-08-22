@@ -36,6 +36,14 @@ impl TerminalReporter {
         Ok(())
     }
     
+    /// Report with external findings (e.g., from LLM analyzer)
+    pub fn report(&self, snapshot: &Snapshot, findings: &[Finding]) -> ReportResult<()> {
+        // Create a temporary snapshot with the provided findings
+        let mut temp_snapshot = snapshot.clone();
+        temp_snapshot.findings = findings.to_vec();
+        self.print_snapshot(&temp_snapshot)
+    }
+    
     fn print_header(&self) -> ReportResult<()> {
         println!("\n{}", "═".repeat(80).bright_blue());
         println!("{}", "KAFKAPILOT HEALTH REPORT".bright_white().bold());
@@ -158,8 +166,26 @@ impl TerminalReporter {
         }
         
         // Print evidence summary
-        if !finding.evidence.metrics.is_empty() || !finding.evidence.logs.is_empty() {
+        if !finding.evidence.metrics.is_empty() || !finding.evidence.logs.is_empty() || !finding.evidence.configs.is_empty() {
             println!("\n  {}", "Evidence:".underline());
+            
+            // Print config evidence with source files
+            for config in &finding.evidence.configs {
+                println!("    • Config {}: {} = {}", 
+                         config.config_key.bright_cyan(),
+                         config.resource_name,
+                         config.current_value.bright_yellow());
+                if let Some(recommended) = &config.recommended_value {
+                    println!("      Recommended: {}", recommended.bright_green());
+                }
+                if !config.source_files.is_empty() {
+                    println!("      {}", "Affected files:".bright_red().underline());
+                    for file in &config.source_files {
+                        println!("        • {}", file.bright_white());
+                    }
+                }
+            }
+            
             for metric in &finding.evidence.metrics {
                 println!("    • {}: {} {}", 
                          metric.name.bright_cyan(), 

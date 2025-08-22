@@ -1,4 +1,5 @@
 pub mod rules;
+pub mod config_validator;
 
 use crate::snapshot::format::{Finding, Snapshot};
 use async_trait::async_trait;

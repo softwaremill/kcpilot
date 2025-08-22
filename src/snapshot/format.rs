@@ -201,6 +201,7 @@ pub struct ConfigEvidence {
     pub current_value: String,
     pub recommended_value: Option<String>,
     pub reason: String,
+    pub source_files: Vec<String>,  // Files where this config issue was found
 }
 
 /// Remediation information for a finding
