@@ -6,6 +6,7 @@ use kafkapilot::analyzers::{AnalyzerRegistry, config_validator::ConfigValidator}
 use kafkapilot::llm::LlmAnalyzer;
 use kafkapilot::snapshot::format::Snapshot;
 use kafkapilot::report::terminal::TerminalReporter;
+use kafkapilot::report::markdown::MarkdownReporter;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
@@ -51,7 +52,7 @@ async fn main() -> Result<()> {
             Ok(())
         }
         
-        Commands::Analyze { snapshot, report } => {
+        Commands::Analyze { snapshot, report, output } => {
             info!("Starting analysis of snapshot: {}", snapshot.display());
             
             // Load snapshot data
@@ -163,18 +164,16 @@ async fn main() -> Result<()> {
                     println!("{}", json);
                 }
                 kafkapilot::cli::commands::ReportFormat::Markdown => {
-                    println!("# Kafka Cluster Analysis Report\n");
-                    println!("## Summary");
-                    println!("Found {} issues\n", findings.len());
-                    println!("## Findings\n");
-                    for finding in &findings {
-                        println!("### {} {}", finding.severity.icon(), finding.title);
-                        println!("{}\n", finding.description);
-                        println!("**Impact**: {}\n", finding.impact);
-                        if let Some(root_cause) = &finding.root_cause {
-                            println!("**Root Cause**: {}\n", root_cause);
-                        }
-                    }
+                    let output_path = output.unwrap_or_else(|| {
+                        // Generate default filename with timestamp
+                        let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+                        PathBuf::from(format!("kafka_report_{}.md", timestamp))
+                    });
+                    
+                    info!("Generating markdown report: {}", output_path.display());
+                    let reporter = MarkdownReporter::new();
+                    reporter.save_report(&snapshot_data, &findings, &output_path)?;
+                    info!("✅ Report saved to: {}", output_path.display());
                 }
                 _ => {
                     println!("Report format {:?} not yet implemented", report);

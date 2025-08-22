@@ -43,6 +43,10 @@ pub enum Commands {
         /// Report format
         #[arg(short, long, value_enum, default_value = "terminal")]
         report: ReportFormat,
+        
+        /// Output file path (required for markdown format, ignored for terminal)
+        #[arg(short, long)]
+        output: Option<PathBuf>,
     },
     
     /// Continuously monitor cluster health
