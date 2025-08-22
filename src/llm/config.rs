@@ -16,10 +16,11 @@ pub struct LlmConfig {
     /// Request timeout in seconds
     pub timeout_secs: u64,
     
-    /// Maximum tokens for response
+    /// Maximum tokens for response (maps to max_completion_tokens for newer models)
     pub max_tokens: u16,
     
     /// Temperature for creativity (0.0-1.0)
+    /// Note: Newer models (GPT-4o, GPT-4-turbo) only support default value (1.0)
     pub temperature: f32,
     
     /// Enable debug logging

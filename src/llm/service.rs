@@ -73,11 +73,31 @@ impl LlmService {
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| LlmServiceError::Other(e))?;
         
-        let request = CreateChatCompletionRequestArgs::default()
+        // Build request with conditional temperature support
+        // Newer models (gpt-4o, gpt-4-turbo, etc.) only support default temperature
+        let mut request_builder = CreateChatCompletionRequestArgs::default();
+        request_builder
             .model(&self.config.model)
             .messages(openai_messages)
-            .max_tokens(self.config.max_tokens)
-            .temperature(self.config.temperature)
+            .max_completion_tokens(self.config.max_tokens);
+        
+        // Only set custom temperature for models that support it
+        // Newer models like gpt-4o, gpt-4-turbo only accept default temperature (1.0)
+        let model_lower = self.config.model.to_lowercase();
+        let skip_temperature = model_lower.contains("gpt-4o") 
+            || model_lower.contains("gpt-4-turbo")
+            || model_lower.contains("gpt-5");
+        
+        if !skip_temperature {
+            request_builder.temperature(self.config.temperature);
+            if self.config.debug {
+                tracing::debug!("Setting temperature to {}", self.config.temperature);
+            }
+        } else if self.config.debug {
+            tracing::debug!("Skipping temperature parameter for model {} (uses default 1.0)", self.config.model);
+        }
+        
+        let request = request_builder
             .build()
             .map_err(|e| LlmServiceError::ApiError(e.to_string()))?;
         
