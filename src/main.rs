@@ -7,6 +7,7 @@ use kafkapilot::llm::LlmAnalyzer;
 use kafkapilot::snapshot::format::Snapshot;
 use kafkapilot::report::terminal::TerminalReporter;
 use kafkapilot::report::markdown::MarkdownReporter;
+use kafkapilot::report::html::HtmlReporter;
 use std::fs;
 use std::path::{Path, PathBuf};
 use tracing::{info, warn};
@@ -174,6 +175,19 @@ async fn main() -> Result<()> {
                     let reporter = MarkdownReporter::new();
                     reporter.save_report(&snapshot_data, &findings, &output_path)?;
                     info!("✅ Report saved to: {}", output_path.display());
+                }
+                kafkapilot::cli::commands::ReportFormat::Html => {
+                    let output_path = output.unwrap_or_else(|| {
+                        // Generate default directory name with timestamp
+                        let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+                        PathBuf::from(format!("kafka_report_{}", timestamp))
+                    });
+                    
+                    info!("Generating HTML report: {}", output_path.display());
+                    let reporter = HtmlReporter::new();
+                    reporter.save_report(&snapshot_data, &findings, &output_path)?;
+                    info!("✅ HTML report saved to: {}/index.html", output_path.display());
+                    info!("   Assets saved to: {}/assets/", output_path.display());
                 }
                 _ => {
                     println!("Report format {:?} not yet implemented", report);

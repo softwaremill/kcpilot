@@ -1439,6 +1439,7 @@ dependencies = [
  "serde_json",
  "serde_yaml",
  "tar",
+ "tempfile",
  "tera",
  "thiserror 1.0.69",
  "tokio",

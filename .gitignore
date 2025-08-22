@@ -1,4 +1,5 @@
 /target
 test-local-scan
 .env
-
+kafka_report_*
+.DS_Store
