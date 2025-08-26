@@ -1,0 +1,58 @@
+id: cluster_overview
+name: Cluster Overview (Quick Scan)
+description: Quick high-level overview of cluster health. For detailed analysis, run specific tasks.
+category: cluster_hygiene
+
+prompt: |
+  You are an expert Kafka administrator. Analyze this Kafka cluster for any issues.
+
+  Cluster Data:
+  {admin}
+
+  Logs (if available):
+  {logs}
+
+  Configuration:
+  {config}
+
+  Please provide a comprehensive analysis including:
+  1. Critical issues that need immediate attention
+  2. Performance problems or bottlenecks  
+  3. Configuration issues or misconfigurations
+  4. Security concerns
+  5. Capacity or scaling issues
+  6. Any anomalies or unusual patterns
+
+  For each issue found, provide:
+  - Clear description of the problem
+  - Impact on the cluster
+  - Root cause if identifiable
+  - Specific remediation steps
+
+  Format your response as JSON:
+  {
+    "findings": [
+      {
+        "title": "Brief title",
+        "severity": "critical|high|medium|low|info",
+        "description": "Detailed description",
+        "impact": "Impact description",
+        "root_cause": "Root cause if known",
+        "remediation": "Steps to fix"
+      }
+    ]
+  }
+
+include_data: []  # Include all available data
+
+severity_keywords:
+  "critical": "critical"
+  "high": "high"
+  "medium": "medium"
+  "low": "low"
+  "offline": "critical"
+  "under-replicated": "high"
+  "degraded": "high"
+
+default_severity: medium
+enabled: true

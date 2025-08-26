@@ -56,16 +56,41 @@ default_severity: medium
 enabled: true
 ```
 
-## 🎯 Built-in Tasks
+## 🎯 Available Tasks (All File-Based)
 
-- **general_health** - Comprehensive cluster health check
-- **log_analysis** - Analyze logs for errors and issues  
-- **partition_health** - Check for offline/under-replicated partitions
-- **config_review** - Review configuration for optimizations
-- **security_audit** - Security configuration audit
-- **consumer_lag** - Consumer lag analysis
-- **disk_usage** - Disk usage and retention analysis
-- **jvm_performance** - JVM performance analysis
+The system is now 100% file-based with NO hardcoded tasks. All tasks are defined in YAML files (18 total).
+
+### Core Health & Overview
+- **cluster_overview.yaml** - Quick high-level cluster health scan
+- **root_cause_analysis.yaml** - Intelligent root cause detection by correlating all data
+
+### Critical Availability (4 tasks)
+- **offline_partitions.yaml** - Detect partitions with no leader
+- **under_replicated_partitions.yaml** - Find partitions with insufficient replicas
+- **isr_shrinkage.yaml** - Detect dangerously small ISR sets (ISR < 2)
+- **network_issues.yaml** - Network connectivity and communication problems
+
+### Performance & Optimization (4 tasks)
+- **performance_analysis.yaml** - Comprehensive performance analysis
+- **jvm_performance.yaml** - JVM and garbage collection performance
+- **leader_imbalance.yaml** - Leader distribution and load balancing
+- **client_consumer_health.yaml** - Consumer groups, lag, and client health
+
+### Configuration (3 tasks)
+- **config_optimization.yaml** - Comprehensive configuration review (30+ settings)
+- **topic_analysis.yaml** - Per-topic configuration and usage analysis
+- **broker_id_issues.yaml** - Critical broker ID conflicts detection
+
+### Capacity & Planning (2 tasks)
+- **disk_usage.yaml** - Current disk usage and retention analysis
+- **capacity_planning.yaml** - Growth projections and future capacity needs
+
+### Security (1 task)
+- **security_audit.yaml** - Security configuration and vulnerability audit
+
+### Log Analysis (2 tasks)
+- **log_quick_scan.yaml** - Quick log error scan
+- **log_detailed_errors.yaml** - Detailed error pattern and rate analysis
 
 ## ✨ Creating Custom Tasks
 

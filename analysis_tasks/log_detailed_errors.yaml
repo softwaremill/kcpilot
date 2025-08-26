@@ -1,5 +1,5 @@
-id: high_error_rate
-name: High Error Rate Detection
+id: log_detailed_errors
+name: Detailed Log Error Analysis
 description: Detect high error rates in Kafka logs indicating system instability
 category: cluster_hygiene
 
