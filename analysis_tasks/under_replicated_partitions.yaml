@@ -1,0 +1,61 @@
+id: under_replicated_partitions
+name: Under-Replicated Partitions Detection
+description: Detect and analyze partitions with insufficient replicas
+category: availability
+
+prompt: |
+  Analyze the Kafka cluster for under-replicated partitions.
+  
+  Admin/Topic Data:
+  {admin}
+  
+  Related Logs:
+  {logs}
+  
+  Please analyze:
+  1. Identify ALL partitions where ISR (In-Sync Replicas) count is less than the replica count
+  2. Group them by topic for easier understanding
+  3. Determine the root cause:
+     - Broker failures or crashes
+     - Network issues between brokers
+     - Disk problems (I/O errors, full disk)
+     - High load causing replicas to fall behind
+     - Replication throttling
+  4. Calculate the impact:
+     - Risk level for data loss
+     - Number of affected partitions
+     - Which brokers are most affected
+  5. Provide specific remediation steps based on the root cause
+  
+  Look for related log patterns:
+  - "Shrinking ISR"
+  - "Replica lag"
+  - "Failed to send request"
+  - "Connection refused"
+  - "Disk error"
+  
+  Format as JSON:
+  {
+    "findings": [{
+      "title": "Under-replicated partitions detected",
+      "severity": "high",
+      "description": "Detailed description",
+      "impact": "Risk assessment",
+      "root_cause": "Identified cause",
+      "affected_partitions": [
+        {"topic": "name", "partition": 0, "isr": 1, "replicas": 3}
+      ],
+      "remediation": "Step-by-step fix"
+    }]
+  }
+
+severity_keywords:
+  "all replicas down": "critical"
+  "no isr": "critical"
+  "under-replicated": "high"
+  "shrinking isr": "high"
+  "replica lag": "medium"
+  "catching up": "medium"
+
+default_severity: high
+enabled: true

@@ -1,0 +1,74 @@
+id: broker_id_issues
+name: Broker ID Configuration Issues
+description: Detect broker ID conflicts and misconfigurations
+category: configuration
+
+prompt: |
+  Analyze Kafka broker configurations for broker ID issues.
+  
+  Configuration Files:
+  {config}
+  
+  Admin/Broker Data:
+  {admin}
+  
+  Check for these critical broker ID issues:
+  1. Duplicate broker IDs:
+     - Multiple brokers using the same broker.id
+     - This causes cluster instability and data corruption!
+  2. Mismatched broker IDs:
+     - broker.id in server.properties doesn't match actual broker ID
+     - Check meta.properties vs server.properties
+  3. Invalid broker IDs:
+     - Negative values
+     - Non-numeric values
+     - Extremely large values
+  4. Generated broker IDs (broker.id.generation.enable=true):
+     - Check if mixing generated and static IDs
+     - Verify generated IDs are unique
+  5. Reserved broker IDs:
+     - Using -1 (reserved for "no leader")
+     - Using IDs reserved for other purposes
+  
+  For each broker, extract:
+  - Configured broker.id from server.properties
+  - Actual broker ID from broker metadata
+  - Node ID (in KRaft mode)
+  
+  Cross-reference all broker IDs to find:
+  - Conflicts
+  - Gaps in numbering (might indicate missing brokers)
+  - Inconsistencies between configuration and runtime
+  
+  This is CRITICAL - duplicate broker IDs can cause:
+  - Data corruption
+  - Leader election failures  
+  - Replication issues
+  - Client connection problems
+  
+  Format as JSON:
+  {
+    "findings": [{
+      "title": "Broker ID configuration issue detected",
+      "severity": "critical",
+      "description": "Detailed description of the issue",
+      "impact": "Data corruption risk",
+      "broker_analysis": {
+        "broker_1": {"configured_id": 1, "actual_id": 1, "status": "OK"},
+        "broker_2": {"configured_id": 1, "actual_id": 2, "status": "MISMATCH"}
+      },
+      "conflicts": ["broker_1 and broker_3 both use ID 1"],
+      "remediation": "Steps to fix broker ID issues"
+    }]
+  }
+
+severity_keywords:
+  "duplicate broker id": "critical"
+  "broker id conflict": "critical"
+  "mismatch": "high"
+  "inconsistent": "high"
+  "invalid broker id": "high"
+  "missing broker": "medium"
+
+default_severity: critical
+enabled: true

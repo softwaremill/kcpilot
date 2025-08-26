@@ -91,6 +91,55 @@ pub enum Commands {
     
     /// Show information about KafkaPilot
     Info,
+    
+    /// Manage analysis tasks
+    Task {
+        #[command(subcommand)]
+        action: TaskCommand,
+    },
+}
+
+#[derive(Subcommand, Debug)]
+pub enum TaskCommand {
+    /// List all available tasks
+    List {
+        /// Show full task details
+        #[arg(long)]
+        detailed: bool,
+    },
+    
+    /// Test a specific task
+    Test {
+        /// Task ID to test
+        task_id: String,
+        
+        /// Path to snapshot file or directory
+        snapshot: PathBuf,
+        
+        /// Enable debug output
+        #[arg(long)]
+        debug: bool,
+    },
+    
+    /// Create a new task from a template
+    New {
+        /// Task ID
+        id: String,
+        
+        /// Task name
+        #[arg(long)]
+        name: Option<String>,
+        
+        /// Output directory (default: analysis_tasks)
+        #[arg(long, default_value = "analysis_tasks")]
+        output_dir: PathBuf,
+    },
+    
+    /// Show details of a specific task
+    Show {
+        /// Task ID
+        task_id: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]

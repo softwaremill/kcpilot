@@ -1,0 +1,46 @@
+id: security_audit
+name: Security Configuration Audit
+description: Check for security vulnerabilities and misconfigurations
+category: security
+
+prompt: |
+  Perform a security audit of this Kafka cluster configuration.
+  
+  Configuration Files:
+  {config}
+  
+  Admin/Broker Information:
+  {admin}
+  
+  Please analyze for:
+  1. Missing authentication/authorization settings
+  2. Unencrypted connections (missing SSL/SASL)
+  3. Default ports exposed
+  4. Insecure ACL configurations
+  5. Missing security patches or outdated versions
+  6. Plain text passwords in configurations
+  7. Overly permissive access controls
+  
+  For each security issue found:
+  - Explain the vulnerability
+  - Describe the potential attack vector
+  - Provide specific remediation steps
+  - Rate the risk level
+  
+  Format as JSON with findings array, including severity levels.
+
+include_data:
+  - config
+  - admin
+
+severity_keywords:
+  "authentication disabled": "critical"
+  "no ssl": "high"
+  "plain text": "critical"
+  "default password": "critical"
+  "no authorization": "high"
+  "public access": "high"
+  "security": "medium"
+
+default_severity: high
+enabled: true

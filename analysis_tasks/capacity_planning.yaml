@@ -1,0 +1,117 @@
+id: capacity_planning
+name: Capacity Planning and Growth Analysis
+description: Analyze current capacity usage and predict future requirements
+category: capacity
+
+prompt: |
+  Perform CAPACITY PLANNING analysis for this Kafka cluster.
+  
+  Configuration: {config}
+  Admin/Topics: {admin}
+  Metrics: {metrics}
+  
+  Comprehensive Capacity Analysis:
+  
+  1. CURRENT CAPACITY USAGE:
+     - Disk space: Used vs Total per broker
+     - Memory usage: Heap and off-heap
+     - CPU utilization: Average and peak
+     - Network bandwidth: Current vs maximum
+     - Partition count: Current vs recommended max
+     - Connection count: Current vs limits
+  
+  2. GROWTH ANALYSIS:
+     - Data growth rate (GB/day, GB/month)
+     - Message rate growth trend
+     - Topic/partition growth rate
+     - Consumer group growth
+     - Calculate growth percentage per month
+  
+  3. RESOURCE EXHAUSTION PREDICTION:
+     - When will disk space run out at current growth?
+     - When will we hit partition count limits?
+     - When will we exceed memory capacity?
+     - When will network become saturated?
+     - Provide specific dates/timeframes
+  
+  4. CAPACITY LIMITS:
+     - Max partitions per broker (typically 4000)
+     - Max connections per broker
+     - File descriptor limits
+     - Memory limits
+     - Network bandwidth limits
+  
+  5. RETENTION IMPACT:
+     - Current retention settings per topic
+     - Disk space used by retention
+     - Cost of increasing retention
+     - Opportunities to reduce retention
+  
+  6. SCALING RECOMMENDATIONS:
+     - Vertical scaling (bigger brokers)
+       * CPU upgrade needs
+       * Memory upgrade needs  
+       * Disk upgrade needs
+     - Horizontal scaling (more brokers)
+       * How many brokers to add?
+       * When to add them?
+     - Partition rebalancing needs
+  
+  7. COST OPTIMIZATION:
+     - Over-provisioned resources
+     - Under-utilized capacity
+     - Right-sizing recommendations
+  
+  8. RISK ASSESSMENT:
+     - Single points of failure
+     - Capacity headroom for failures
+     - Ability to handle traffic spikes
+     - Disaster recovery capacity needs
+  
+  Calculate specific projections:
+  - 30-day projection
+  - 90-day projection
+  - 6-month projection
+  - 1-year projection
+  
+  Format as JSON:
+  {
+    "findings": [{
+      "title": "Capacity planning: [specific finding]",
+      "severity": "medium",
+      "description": "Detailed capacity analysis",
+      "current_usage": {
+        "disk": {"used_gb": 500, "total_gb": 1000, "percentage": 50},
+        "memory": {"used_gb": 16, "total_gb": 32, "percentage": 50},
+        "partitions": {"count": 2000, "max_recommended": 4000},
+        "growth_rate": {"gb_per_day": 10, "percent_per_month": 5}
+      },
+      "projections": {
+        "disk_exhaustion": "60 days",
+        "partition_limit": "120 days",
+        "memory_pressure": "90 days"
+      },
+      "recommendations": {
+        "immediate": "Add 500GB disk space",
+        "30_days": "Add 1 broker",
+        "90_days": "Upgrade to 64GB RAM",
+        "cost_savings": "Reduce topic X retention from 7 to 3 days, save 200GB"
+      },
+      "risks": {
+        "headroom": "Only 10% capacity headroom for failures",
+        "spike_handling": "Cannot handle 2x traffic spike"
+      },
+      "remediation": "1. Add disk space immediately\n2. Plan broker addition\n3. Review retention policies"
+    }]
+  }
+
+severity_keywords:
+  "disk exhaustion imminent": "critical"
+  "capacity limit approaching": "high"
+  "insufficient headroom": "high"
+  "growth unsustainable": "high"
+  "over-provisioned": "low"
+  "optimization opportunity": "low"
+
+default_severity: medium
+enabled: true

@@ -1,0 +1,51 @@
+id: jvm_performance
+name: JVM Performance Analysis
+description: Analyze JVM settings and garbage collection performance
+category: performance
+
+prompt: |
+  Analyze JVM performance and configuration for Kafka brokers.
+  
+  Configuration (JVM settings):
+  {config}
+  
+  Logs (look for GC pauses and memory issues):
+  {logs}
+  
+  Please analyze:
+  1. Heap size configuration (-Xmx, -Xms)
+  2. Garbage collection settings and performance
+  3. GC pause times and frequency
+  4. Memory pressure indicators
+  5. OutOfMemory errors or risks
+  6. JVM version compatibility
+  
+  Look for patterns like:
+  - Long GC pauses affecting latency
+  - Frequent full GCs
+  - Memory leaks
+  - Incorrect heap sizing
+  - Suboptimal GC algorithm selection
+  
+  Provide:
+  - Specific JVM tuning recommendations
+  - Optimal heap size calculations
+  - GC algorithm suggestions
+  - Memory optimization strategies
+  
+  Format as JSON with findings array.
+
+include_data:
+  - config
+  - logs
+
+severity_keywords:
+  "OutOfMemory": "critical"
+  "long gc pause": "high"
+  "frequent full gc": "high"
+  "memory pressure": "medium"
+  "gc overhead": "medium"
+  "heap too small": "medium"
+
+default_severity: medium
+enabled: true

@@ -1,0 +1,115 @@
+id: performance_analysis
+name: Comprehensive Performance Analysis
+description: Analyze cluster performance bottlenecks and optimization opportunities
+category: performance
+
+prompt: |
+  Perform a comprehensive PERFORMANCE ANALYSIS of this Kafka cluster.
+  
+  Configuration: {config}
+  Logs: {logs}
+  Admin Data: {admin}
+  Metrics (if available): {metrics}
+  
+  Analyze these performance aspects:
+  
+  1. THROUGHPUT ANALYSIS:
+     - Current message rate (messages/sec, MB/sec)
+     - Peak vs average throughput
+     - Bottlenecks limiting throughput
+     - Producer vs consumer throughput balance
+  
+  2. LATENCY ANALYSIS:
+     - End-to-end latency
+     - Producer latency (time to ack)
+     - Consumer lag and processing time
+     - Replication lag
+     - Request queue times
+  
+  3. RESOURCE UTILIZATION:
+     - CPU usage patterns
+     - Memory utilization (heap and off-heap)
+     - Disk I/O (read/write IOPS, throughput)
+     - Network bandwidth usage
+     - File descriptor usage
+  
+  4. JVM PERFORMANCE:
+     - GC frequency and pause times
+     - Heap usage patterns
+     - Thread pool utilization
+     - Memory pressure indicators
+  
+  5. BROKER PERFORMANCE:
+     - Request handler idle ratio
+     - Network thread idle ratio
+     - I/O thread utilization
+     - Fetch/Produce purgatory sizes
+  
+  6. PARTITION & TOPIC EFFICIENCY:
+     - Partition count vs throughput
+     - Message size optimization
+     - Compression effectiveness
+     - Batch size efficiency
+  
+  7. BOTTLENECK IDENTIFICATION:
+     - Is it CPU bound?
+     - Is it I/O bound?
+     - Is it network bound?
+     - Is it configuration limited?
+  
+  8. OPTIMIZATION OPPORTUNITIES:
+     - Configuration tuning potential
+     - Hardware upgrade recommendations
+     - Partitioning strategy improvements
+     - Client-side optimizations
+  
+  Look for performance anti-patterns:
+  - Small batch sizes
+  - No compression
+  - Synchronous operations where async would work
+  - Inefficient consumer patterns
+  - Poor partition distribution
+  - Resource contention
+  
+  Provide specific numbers and percentages.
+  
+  Format as JSON:
+  {
+    "findings": [{
+      "title": "Performance bottleneck: [specific issue]",
+      "severity": "medium",
+      "description": "Detailed performance analysis",
+      "metrics": {
+        "current_throughput": "1000 msg/sec",
+        "max_observed": "5000 msg/sec",
+        "bottleneck": "Disk I/O",
+        "utilization": {
+          "cpu": "60%",
+          "memory": "75%",
+          "disk_io": "95%",
+          "network": "30%"
+        }
+      },
+      "impact": "Cluster operating at 20% of potential capacity",
+      "optimization_opportunities": [
+        {
+          "area": "Disk I/O",
+          "current": "HDD, 100MB/s",
+          "recommended": "SSD, 500MB/s",
+          "expected_improvement": "5x throughput"
+        }
+      ],
+      "remediation": "1. Upgrade to SSD\n2. Enable compression\n3. Increase batch size"
+    }]
+  }
+
+severity_keywords:
+  "severe bottleneck": "high"
+  "performance degradation": "high"
+  "high latency": "medium"
+  "suboptimal": "low"
+  "inefficient": "medium"
+  "resource exhaustion": "critical"
+
+default_severity: medium
+enabled: true

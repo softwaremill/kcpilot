@@ -1,0 +1,52 @@
+id: network_issues
+name: Network and Connectivity Issues
+description: Detect network-related problems affecting cluster communication
+category: availability
+
+prompt: |
+  Analyze the Kafka cluster for network and connectivity issues.
+  
+  Logs:
+  {logs}
+  
+  Admin Data:
+  {admin}
+  
+  Look for:
+  1. Connection timeouts between brokers
+  2. Network partitions or split-brain scenarios
+  3. High network latency indicators
+  4. SSL/TLS handshake failures
+  5. DNS resolution problems
+  6. Firewall or port accessibility issues
+  7. Client connection problems
+  8. Inter-broker communication failures
+  
+  Search for patterns like:
+  - "Connection refused"
+  - "Timeout" 
+  - "Network unreachable"
+  - "Connection reset"
+  - "Failed to resolve"
+  - "SSL handshake failed"
+  
+  For each issue provide:
+  - Affected brokers/clients
+  - Frequency and timing
+  - Impact on cluster operations
+  - Root cause hypothesis
+  - Remediation steps
+  
+  Format as JSON with findings array including severity.
+
+severity_keywords:
+  "network partition": "critical"
+  "split brain": "critical" 
+  "connection refused": "high"
+  "timeout": "medium"
+  "high latency": "medium"
+  "ssl failed": "high"
+  "dns failure": "high"
+
+default_severity: medium
+enabled: true

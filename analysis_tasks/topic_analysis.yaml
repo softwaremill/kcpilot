@@ -1,0 +1,117 @@
+id: topic_analysis
+name: Topic Configuration and Usage Analysis
+description: Analyze individual topics for configuration issues and optimization
+category: configuration
+
+prompt: |
+  Analyze all Kafka topics for configuration issues and optimization opportunities.
+  
+  Admin/Topics Data:
+  {admin}
+  
+  Configuration:
+  {config}
+  
+  For EACH topic, analyze:
+  
+  1. PARTITION STRATEGY:
+     - Current partition count
+     - Is it appropriate for throughput?
+     - Even partition distribution?
+     - Key-based vs round-robin
+     - Partition size imbalance
+  
+  2. REPLICATION SETTINGS:
+     - Replication factor
+     - Min ISR settings
+     - ISR status per partition
+     - Under-replicated partitions
+  
+  3. RETENTION CONFIGURATION:
+     - Retention time/size settings
+     - Is retention appropriate for use case?
+     - Disk space impact
+     - Cleanup policy (delete/compact)
+  
+  4. TOPIC-SPECIFIC CONFIGS:
+     - compression.type
+     - max.message.bytes
+     - segment.ms/bytes
+     - flush settings
+  
+  5. USAGE PATTERNS:
+     - Message rate (if available from metrics)
+     - Message sizes
+     - Consumer groups consuming
+     - Partition lag
+  
+  6. NAMING CONVENTIONS:
+     - Do topics follow naming standards?
+     - Are there test/temporary topics in production?
+     - Deprecated or unused topics
+  
+  7. SPECIAL TOPICS:
+     - __consumer_offsets configuration
+     - __transaction_state configuration
+     - Internal topics optimization
+  
+  Identify problematic patterns:
+  - Topics with 1 partition (no parallelism)
+  - Topics with too many partitions (overhead)
+  - Replication factor = 1 (no redundancy)
+  - Infinite retention
+  - No compression on high-volume topics
+  - Abandoned topics (no activity)
+  - Test topics in production
+  
+  For each issue found:
+  - Specific topic name
+  - Current configuration
+  - Recommended changes
+  - Impact of not fixing
+  - Migration strategy if needed
+  
+  Format as JSON:
+  {
+    "findings": [{
+      "title": "Topic configuration issues found",
+      "severity": "medium",
+      "description": "X topics have suboptimal configuration",
+      "problematic_topics": [
+        {
+          "topic": "orders",
+          "issues": [
+            "Only 1 partition - no parallelism",
+            "No compression - wasting disk space"
+          ],
+          "current_config": {
+            "partitions": 1,
+            "replication": 3,
+            "compression": "none"
+          },
+          "recommendations": {
+            "partitions": "Increase to 10",
+            "compression": "Enable snappy"
+          }
+        }
+      ],
+      "summary": {
+        "total_topics": 50,
+        "topics_with_issues": 15,
+        "critical_issues": 3,
+        "disk_savings_possible": "500GB with compression"
+      },
+      "remediation": "1. Fix critical issues first\n2. Enable compression\n3. Adjust partition counts"
+    }]
+  }
+
+severity_keywords:
+  "replication factor 1": "critical"
+  "no redundancy": "critical"
+  "single partition": "medium"
+  "no compression": "low"
+  "infinite retention": "high"
+  "abandoned topic": "low"
+
+default_severity: medium
+enabled: true

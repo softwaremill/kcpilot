@@ -3,7 +3,7 @@ use clap::Parser;
 use kafkapilot::cli::commands::{Cli, Commands};
 use kafkapilot::scan::Scanner;
 use kafkapilot::analyzers::{AnalyzerRegistry, config_validator::ConfigValidator};
-use kafkapilot::llm::LlmAnalyzer;
+use kafkapilot::analysis::AiExecutor;
 use kafkapilot::snapshot::format::Snapshot;
 use kafkapilot::report::terminal::TerminalReporter;
 use kafkapilot::report::markdown::MarkdownReporter;
@@ -127,33 +127,29 @@ async fn main() -> Result<()> {
                 return Err(anyhow::anyhow!("No data available for analysis"));
             }
             
-            // Create analyzer registry
-            let mut registry = AnalyzerRegistry::new();
+            // Use AI-only analysis
+            info!("🤖 Using AI-powered analysis...");
             
-            // Add configuration validator (rule-based)
-            registry.register(Box::new(ConfigValidator::new()));
-            let mut analyzers_enabled = vec!["Configuration Validator".to_string()];
-            
-            // Try to add LLM analyzer if configured
-            match LlmAnalyzer::from_env_with_options(llmdbg, llm_timeout) {
-                Ok(llm_analyzer) => {
-                    analyzers_enabled.push("LLM-Enhanced Analyzer".to_string());
-                    registry.register(Box::new(llm_analyzer));
-                    if llm_timeout != 300 {
-                        info!("Using custom LLM timeout: {} seconds", llm_timeout);
-                    }
+            let findings = if let Ok(llm_service) = kafkapilot::llm::LlmService::from_env_with_options(llmdbg, llm_timeout) {
+                info!("✓ AI executor initialized");
+                if llm_timeout != 300 {
+                    info!("  Using custom timeout: {} seconds", llm_timeout);
                 }
-                Err(e) => {
-                    warn!("LLM analyzer not available: {}. Continuing with rule-based analysis only.", e);
-                }
-            }
-            
-            info!("Analyzers enabled: {}", analyzers_enabled.join(", "));
-            info!("────────────────────────────────────────\n");
-            
-            // Run analysis
-            info!("🔄 Starting analysis...");
-            let findings = registry.analyze_all(&snapshot_data).await?;
+                
+                let mut executor = AiExecutor::new(llm_service);
+                info!("  Loading analysis tasks from 'analysis_tasks' directory...");
+                
+                executor.analyze_all(&snapshot_data).await?
+            } else {
+                warn!("AI analysis not available - LLM API key not configured");
+                warn!("Please set OPENAI_API_KEY or LLM_API_KEY environment variable");
+                
+                // Fall back to basic static analysis if no LLM available
+                info!("Falling back to static configuration validator...");
+                let mut registry = AnalyzerRegistry::new();
+                registry.register(Box::new(ConfigValidator::new()));
+                registry.analyze_all(&snapshot_data).await?
+            };
             
             info!("Analysis complete. Found {} issues", findings.len());
             
@@ -220,7 +216,187 @@ async fn main() -> Result<()> {
             print_info();
             Ok(())
         }
+        
+        Commands::Task { action } => {
+            handle_task_command(action).await
+        }
     }
+}
+
+/// Handle task management commands
+async fn handle_task_command(action: kafkapilot::cli::commands::TaskCommand) -> Result<()> {
+    use kafkapilot::cli::commands::TaskCommand;
+    use kafkapilot::analysis::{TaskLoader, AiExecutor};
+    
+    match action {
+        TaskCommand::List { detailed } => {
+            let loader = TaskLoader::default();
+            let tasks = loader.load_all()?;
+            
+            println!("\n📋 Available Analysis Tasks\n");
+            println!("{}", "─".repeat(60));
+            
+            for task in tasks {
+                if detailed {
+                    println!("\n🔍 {}", task.name);
+                    println!("   ID: {}", task.id);
+                    println!("   Description: {}", task.description);
+                    println!("   Category: {}", task.category);
+                    println!("   Default Severity: {}", task.default_severity);
+                    println!("   Enabled: {}", task.enabled);
+                    if !task.include_data.is_empty() {
+                        println!("   Required Data: {}", task.include_data.join(", "));
+                    }
+                } else {
+                    println!("• {} ({})", task.name, task.id);
+                }
+            }
+            
+            if !detailed {
+                println!("\n💡 Use --detailed for more information");
+            }
+        }
+        
+        TaskCommand::Test { task_id, snapshot, debug } => {
+            // Load the specific task
+            let loader = TaskLoader::default();
+            let tasks = loader.load_all()?;
+            let task = tasks.into_iter()
+                .find(|t| t.id == task_id)
+                .ok_or_else(|| anyhow::anyhow!("Task '{}' not found", task_id))?;
+            
+            println!("🧪 Testing task: {}", task.name);
+            
+            // Load snapshot
+            let snapshot_data = if snapshot.is_dir() {
+                load_snapshot_from_directory(&snapshot)?
+            } else {
+                let content = fs::read_to_string(&snapshot)?;
+                serde_json::from_str(&content)?
+            };
+            
+            // Run the task
+            if let Ok(llm_service) = kafkapilot::llm::LlmService::from_env_with_debug(debug) {
+                let executor = AiExecutor::new(llm_service);
+                
+                match executor.execute_task(&task, &snapshot_data).await {
+                    Ok(findings) => {
+                        println!("\n✅ Task completed successfully!");
+                        println!("Found {} issues:\n", findings.len());
+                        
+                        for finding in findings {
+                            println!("  {} [{}] {}", 
+                                match finding.severity {
+                                    kafkapilot::snapshot::format::Severity::Critical => "🔴",
+                                    kafkapilot::snapshot::format::Severity::High => "🟠",
+                                    kafkapilot::snapshot::format::Severity::Medium => "🟡",
+                                    kafkapilot::snapshot::format::Severity::Low => "🟢",
+                                    kafkapilot::snapshot::format::Severity::Info => "ℹ️",
+                                },
+                                finding.id, 
+                                finding.title
+                            );
+                            println!("     {}", finding.description);
+                            println!();
+                        }
+                    }
+                    Err(e) => {
+                        println!("\n❌ Task failed: {}", e);
+                    }
+                }
+            } else {
+                println!("❌ LLM service not configured. Please set OPENAI_API_KEY.");
+            }
+        }
+        
+        TaskCommand::New { id, name, output_dir } => {
+            // Create directory if it doesn't exist
+            fs::create_dir_all(&output_dir)?;
+            
+            let task_name = name.unwrap_or_else(|| format!("New Task {}", id));
+            
+            // Create a template task
+            let template = format!(r#"# Task definition for {}
+id: {}
+name: {}
+description: Analyze Kafka cluster for specific issues
+category: cluster_hygiene
+
+# The prompt sent to the AI
+# Available placeholders: {{logs}}, {{config}}, {{metrics}}, {{admin}}, {{topics}}
+prompt: |
+  Analyze this Kafka cluster data for issues:
+  
+  Cluster Data:
+  {{admin}}
+  
+  Configuration:
+  {{config}}
+  
+  Please identify any problems and provide recommendations.
+  
+  Format your response as JSON with a "findings" array.
+
+# Which data to include (leave empty for all)
+include_data: []
+
+# Keywords that indicate severity levels
+severity_keywords:
+  critical: "critical"
+  high: "high" 
+  medium: "medium"
+  low: "low"
+
+default_severity: medium
+enabled: true
+"#, task_name, id, task_name);
+            
+            let file_path = output_dir.join(format!("{}.yaml", id));
+            fs::write(&file_path, template)?;
+            
+            println!("✅ Created task template: {}", file_path.display());
+            println!("\n📝 Edit the file to customize:");
+            println!("  - Update the prompt with your specific analysis requirements");
+            println!("  - Adjust severity keywords for your use case");
+            println!("  - Specify required data in include_data if needed");
+        }
+        
+        TaskCommand::Show { task_id } => {
+            let loader = TaskLoader::default();
+            let tasks = loader.load_all()?;
+            let task = tasks.into_iter()
+                .find(|t| t.id == task_id)
+                .ok_or_else(|| anyhow::anyhow!("Task '{}' not found", task_id))?;
+            
+            println!("\n📄 Task Details: {}\n", task.name);
+            println!("{}", "─".repeat(60));
+            println!("ID: {}", task.id);
+            println!("Description: {}", task.description);
+            println!("Category: {}", task.category);
+            println!("Default Severity: {}", task.default_severity);
+            println!("Enabled: {}", task.enabled);
+            
+            if !task.include_data.is_empty() {
+                println!("\nRequired Data:");
+                for data in &task.include_data {
+                    println!("  • {}", data);
+                }
+            }
+            
+            if !task.severity_keywords.is_empty() {
+                println!("\nSeverity Keywords:");
+                for (keyword, severity) in &task.severity_keywords {
+                    println!("  • {} → {}", keyword, severity);
+                }
+            }
+            
+            println!("\nPrompt:");
+            println!("{}", "─".repeat(40));
+            println!("{}", task.prompt);
+        }
+    }
+    
+    Ok(())
 }
 
 fn init_logging(verbose: bool, log_format: &str) {

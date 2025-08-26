@@ -1,0 +1,49 @@
+id: disk_usage
+name: Disk Usage and Retention Analysis
+description: Analyze disk usage patterns and retention policy effectiveness
+category: capacity
+
+prompt: |
+  Analyze Kafka cluster disk usage and retention policies.
+  
+  Configuration (check for retention settings):
+  {config}
+  
+  Admin/Topic Information:
+  {admin}
+  
+  Metrics (if available):
+  {metrics}
+  
+  Please analyze:
+  1. Current disk usage per broker
+  2. Topics consuming the most disk space
+  3. Retention policy effectiveness
+  4. Log segment sizes and counts
+  5. Compaction vs deletion policies
+  6. Growth trends and projections
+  
+  For each finding:
+  - Identify topics that could be optimized
+  - Calculate potential space savings
+  - Recommend retention policy changes
+  - Suggest compaction where beneficial
+  
+  Include specific numbers and percentages where possible.
+  
+  Format as JSON with findings array.
+
+include_data:
+  - config
+  - admin
+  - metrics
+
+severity_keywords:
+  "disk full": "critical"
+  "90% usage": "high"
+  "80% usage": "medium"
+  "rapid growth": "medium"
+  "inefficient retention": "low"
+
+default_severity: medium
+enabled: true
