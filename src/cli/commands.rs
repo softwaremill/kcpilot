@@ -47,6 +47,14 @@ pub enum Commands {
         /// Output file path (required for markdown format, ignored for terminal)
         #[arg(short, long)]
         output: Option<PathBuf>,
+        
+        /// Enable LLM debug logging to llmdbg.txt
+        #[arg(long)]
+        llmdbg: bool,
+        
+        /// LLM request timeout in seconds (default: 300)
+        #[arg(long, default_value = "300")]
+        llm_timeout: u64,
     },
     
     /// Continuously monitor cluster health

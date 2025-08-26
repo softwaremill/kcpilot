@@ -44,6 +44,18 @@ impl LlmAnalyzer {
         Ok(Self::new(service))
     }
     
+    /// Create from environment configuration with debug logging
+    pub fn from_env_with_debug(enable_debug: bool) -> Result<Self, LlmServiceError> {
+        let service = LlmService::from_env_with_debug(enable_debug)?;
+        Ok(Self::new(service))
+    }
+    
+    /// Create from environment configuration with options
+    pub fn from_env_with_options(enable_debug: bool, timeout_secs: u64) -> Result<Self, LlmServiceError> {
+        let service = LlmService::from_env_with_options(enable_debug, timeout_secs)?;
+        Ok(Self::new(service))
+    }
+    
     /// Enable specific analysis types
     pub fn with_analyses(mut self, analyses: Vec<AnalysisType>) -> Self {
         self.enabled_analyses = analyses;

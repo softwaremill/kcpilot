@@ -33,8 +33,8 @@ impl Default for LlmConfig {
             api_key: String::new(),
             model: "gpt-4-turbo-preview".to_string(),
             api_base: None,
-            timeout_secs: 60,
-            max_tokens: 4000,
+            timeout_secs: 300,  // Increased from 60 to 300 seconds (5 minutes)
+            max_tokens: 8000,  // Increased from 4000 to 8000 for larger responses
             temperature: 0.3,
             debug: false,
         }
@@ -107,6 +107,22 @@ impl LlmConfig {
         
         if self.max_tokens == 0 {
             return Err("Max tokens must be greater than 0".to_string());
+        }
+        
+        // Validate model name
+        let valid_models = vec![
+            "gpt-4", "gpt-4-turbo", "gpt-4-turbo-preview", "gpt-4o", "gpt-4o-mini",
+            "gpt-3.5-turbo", "gpt-3.5-turbo-16k"
+        ];
+        
+        let model_lower = self.model.to_lowercase();
+        
+        // Check for invalid model names
+        if model_lower.contains("gpt-5") {
+            eprintln!("WARNING: Model '{}' does not exist yet. Consider using 'gpt-4-turbo-preview' or 'gpt-4o' instead.", self.model);
+            eprintln!("Set OPENAI_MODEL environment variable to override the model.");
+        } else if !valid_models.iter().any(|&m| model_lower.contains(m)) {
+            eprintln!("WARNING: Model '{}' may not be valid. Known models: {:?}", self.model, valid_models);
         }
         
         Ok(())

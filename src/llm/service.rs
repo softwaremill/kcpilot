@@ -9,8 +9,12 @@ use async_openai::{
     Client,
 };
 use serde_json::Value;
+use std::fs::OpenOptions;
+use std::io::Write;
+use std::sync::Mutex;
 use std::time::Duration;
 use thiserror::Error;
+use chrono::Local;
 
 /// Errors that can occur in LLM service
 #[derive(Debug, Error)]
@@ -24,8 +28,8 @@ pub enum LlmServiceError {
     #[error("Parse error: {0}")]
     ParseError(String),
     
-    #[error("Request timeout")]
-    Timeout,
+    #[error("Request timeout after {0} seconds. Try increasing timeout with --llm-timeout flag")]
+    Timeout(u64),
     
     #[error("Rate limit exceeded")]
     RateLimitExceeded,
@@ -38,6 +42,7 @@ pub enum LlmServiceError {
 pub struct LlmService {
     client: Client<OpenAIConfig>,
     config: LlmConfig,
+    debug_file: Option<Mutex<std::fs::File>>,
 }
 
 impl LlmService {
@@ -55,7 +60,11 @@ impl LlmService {
         
         let client = Client::with_config(openai_config);
         
-        Ok(Self { client, config })
+        Ok(Self { 
+            client, 
+            config,
+            debug_file: None,
+        })
     }
     
     /// Create a service from environment variables
@@ -65,8 +74,86 @@ impl LlmService {
         Self::new(config)
     }
     
+    /// Create a service from environment variables with debug logging
+    pub fn from_env_with_debug(enable_debug: bool) -> Result<Self, LlmServiceError> {
+        let config = LlmConfig::from_env()
+            .map_err(|e| LlmServiceError::ConfigError(e))?;
+        let service = Self::new(config)?;
+        service.with_debug_file(enable_debug)
+    }
+    
+    /// Create a service from environment variables with options
+    pub fn from_env_with_options(enable_debug: bool, timeout_secs: u64) -> Result<Self, LlmServiceError> {
+        let mut config = LlmConfig::from_env()
+            .map_err(|e| LlmServiceError::ConfigError(e))?;
+        
+        // Override timeout with CLI flag value
+        config.timeout_secs = timeout_secs;
+        
+        let service = Self::new(config)?;
+        service.with_debug_file(enable_debug)
+    }
+    
+    /// Enable debug logging to file
+    pub fn with_debug_file(mut self, enable_debug: bool) -> Result<Self, LlmServiceError> {
+        if enable_debug {
+            let file = OpenOptions::new()
+                .create(true)
+                .append(true)
+                .open("llmdbg.txt")
+                .map_err(|e| LlmServiceError::Other(format!("Failed to open debug file: {}", e)))?;
+            self.debug_file = Some(Mutex::new(file));
+            self.log_debug("==================================================");
+            self.log_debug("=== LLM Debug Logging Session Started ===");
+            self.log_debug("==================================================");
+            self.log_debug(&format!("Model: {}", self.config.model));
+            self.log_debug(&format!("Max Tokens: {}", self.config.max_tokens));
+            self.log_debug(&format!("Temperature: {}", self.config.temperature));
+            self.log_debug(&format!("Timeout: {} seconds", self.config.timeout_secs));
+            if let Some(api_base) = &self.config.api_base {
+                self.log_debug(&format!("API Base: {}", api_base));
+            }
+            self.log_debug("==================================================\n");
+        }
+        Ok(self)
+    }
+    
+    /// Log debug information to file if debug mode is enabled
+    fn log_debug(&self, message: &str) {
+        if let Some(ref file_mutex) = self.debug_file {
+            if let Ok(mut file) = file_mutex.lock() {
+                let timestamp = Local::now().format("%Y-%m-%d %H:%M:%S%.3f");
+                let _ = writeln!(file, "[{}] {}", timestamp, message);
+                let _ = file.flush();
+            }
+        }
+    }
+    
     /// Send a chat completion request
     pub async fn chat(&self, messages: Vec<ChatMessage>) -> Result<String, LlmServiceError> {
+        // Log the request if debug mode is enabled
+        if self.debug_file.is_some() {
+            self.log_debug("\n==== NEW LLM REQUEST ====");
+            self.log_debug(&format!("Timestamp: {}", Local::now().format("%Y-%m-%d %H:%M:%S")));
+            self.log_debug(&format!("Model: {}", self.config.model));
+            self.log_debug(&format!("Max tokens: {}", self.config.max_tokens));
+            self.log_debug(&format!("Number of messages: {}", messages.len()));
+            self.log_debug("--- Messages ---");
+            for (i, msg) in messages.iter().enumerate() {
+                let role = match msg {
+                    ChatMessage::System(_) => "System",
+                    ChatMessage::User(_) => "User",
+                    ChatMessage::Assistant(_) => "Assistant",
+                };
+                let content = match msg {
+                    ChatMessage::System(c) | ChatMessage::User(c) | ChatMessage::Assistant(c) => c,
+                };
+                self.log_debug(&format!("\n[Message {}] Role: {}", i + 1, role));
+                self.log_debug(&format!("[Message {}] Content:\n{}", i + 1, content));
+            }
+            self.log_debug("\n--- End of Messages ---");
+        }
+        
         let openai_messages = messages
             .into_iter()
             .map(|msg| msg.into_openai_message())
@@ -106,13 +193,31 @@ impl LlmService {
                           self.config.model, request.messages.len());
         }
         
+        // Log that we're sending the request
+        if self.debug_file.is_some() {
+            self.log_debug(&format!("Sending request to LLM API (timeout: {} seconds)...", self.config.timeout_secs));
+        }
+        
         let response = tokio::time::timeout(
             Duration::from_secs(self.config.timeout_secs),
             self.client.chat().create(request)
         )
         .await
-        .map_err(|_| LlmServiceError::Timeout)?
+        .map_err(|_| {
+            let timeout_msg = format!(
+                "Request timed out after {} seconds. Consider increasing timeout with --llm-timeout flag or LLM_REQUEST_TIMEOUT env var", 
+                self.config.timeout_secs
+            );
+            if self.debug_file.is_some() {
+                self.log_debug(&format!("ERROR: {}", timeout_msg));
+            }
+            tracing::error!("{}", timeout_msg);
+            LlmServiceError::Timeout(self.config.timeout_secs)
+        })?
         .map_err(|e| {
+            if self.debug_file.is_some() {
+                self.log_debug(&format!("ERROR: API request failed: {}", e));
+            }
             if e.to_string().contains("rate limit") {
                 LlmServiceError::RateLimitExceeded
             } else {
@@ -120,12 +225,67 @@ impl LlmService {
             }
         })?;
         
+        // Log raw response details
+        if self.debug_file.is_some() {
+            self.log_debug("--- LLM Response Received ---");
+            self.log_debug(&format!("Number of choices: {}", response.choices.len()));
+            if let Some(usage) = &response.usage {
+                self.log_debug(&format!("Tokens used - Prompt: {}, Completion: {}, Total: {}", 
+                    usage.prompt_tokens, usage.completion_tokens, usage.total_tokens));
+            }
+        }
+        
         let content = response
             .choices
             .first()
             .and_then(|choice| choice.message.content.as_ref())
-            .ok_or_else(|| LlmServiceError::ParseError("No response content".to_string()))?
+            .ok_or_else(|| {
+                if self.debug_file.is_some() {
+                    self.log_debug("ERROR: No response content in API response");
+                    self.log_debug("This usually means the model hit the token limit without generating output.");
+                    self.log_debug("Try: 1) Using a shorter prompt, 2) Increasing max_tokens, 3) Using a different model");
+                }
+                LlmServiceError::ParseError("No response content - likely hit token limit".to_string())
+            })?
             .to_string();
+        
+        // Check for empty response content
+        if content.is_empty() {
+            if self.debug_file.is_some() {
+                self.log_debug("ERROR: Response content is empty");
+                self.log_debug("The model returned an empty response, which often indicates:");
+                self.log_debug("1. Token limit reached before any output could be generated");
+                self.log_debug("2. Model issue (check if model name is valid)");
+                self.log_debug("3. API configuration issue");
+                if let Some(usage) = &response.usage {
+                    self.log_debug(&format!("Token usage: prompt={}, completion={}, total={}", 
+                        usage.prompt_tokens, usage.completion_tokens, usage.total_tokens));
+                    if usage.completion_tokens >= (self.config.max_tokens as u32).saturating_sub(10) {
+                        self.log_debug("WARNING: Completion tokens nearly at max limit - increase max_tokens!");
+                    }
+                }
+            }
+            return Err(LlmServiceError::ParseError(
+                format!("Empty response from model. Token limit may be too low (current: {}). Try increasing with LLM_MAX_TOKENS env var.", 
+                    self.config.max_tokens)
+            ));
+        }
+        
+        // Log the response content if debug mode is enabled
+        if self.debug_file.is_some() {
+            self.log_debug(&format!("\n--- Response Content ---"));
+            self.log_debug(&format!("Response length: {} characters", content.len()));
+            self.log_debug(&format!("Response preview (first 500 chars): {}", 
+                if content.len() > 500 { 
+                    format!("{}...", &content[..500]) 
+                } else { 
+                    content.clone() 
+                }
+            ));
+            self.log_debug(&format!("\n--- Full Response ---\n{}", content));
+            self.log_debug(&format!("\n==== END OF REQUEST/RESPONSE ===="));
+            self.log_debug(&format!("Completed at: {}\n", Local::now().format("%Y-%m-%d %H:%M:%S")));
+        }
         
         if self.config.debug {
             tracing::debug!("Received response: {} chars", content.len());

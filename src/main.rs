@@ -53,7 +53,7 @@ async fn main() -> Result<()> {
             Ok(())
         }
         
-        Commands::Analyze { snapshot, report, output } => {
+        Commands::Analyze { snapshot, report, output, llmdbg, llm_timeout } => {
             info!("Starting analysis of snapshot: {}", snapshot.display());
             
             // Load snapshot data
@@ -135,10 +135,13 @@ async fn main() -> Result<()> {
             let mut analyzers_enabled = vec!["Configuration Validator".to_string()];
             
             // Try to add LLM analyzer if configured
-            match LlmAnalyzer::from_env() {
+            match LlmAnalyzer::from_env_with_options(llmdbg, llm_timeout) {
                 Ok(llm_analyzer) => {
                     analyzers_enabled.push("LLM-Enhanced Analyzer".to_string());
                     registry.register(Box::new(llm_analyzer));
+                    if llm_timeout != 300 {
+                        info!("Using custom LLM timeout: {} seconds", llm_timeout);
+                    }
                 }
                 Err(e) => {
                     warn!("LLM analyzer not available: {}. Continuing with rule-based analysis only.", e);
