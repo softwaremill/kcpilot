@@ -97,6 +97,13 @@ pub enum Commands {
         #[command(subcommand)]
         action: TaskCommand,
     },
+    
+    /// Test SSH connectivity to brokers
+    TestSsh {
+        /// SSH bastion alias (from ~/.ssh/config). If not provided, assumes running locally on bastion
+        #[arg(short, long)]
+        bastion: Option<String>,
+    },
 }
 
 #[derive(Subcommand, Debug)]

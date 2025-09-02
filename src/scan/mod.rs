@@ -5,11 +5,16 @@ use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 pub mod collector;
+pub mod log_discovery;
+pub mod enhanced_log_discovery;
+#[cfg(test)]
+mod test_log_discovery;
 
 use collector::{BastionCollector, BrokerCollector};
+// Import log_discovery types when needed
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ScanConfig {
@@ -71,7 +76,7 @@ pub struct CollectionStats {
 }
 
 pub struct Scanner {
-    config: ScanConfig,
+    pub config: ScanConfig,
 }
 
 impl Scanner {
@@ -213,6 +218,13 @@ impl Scanner {
         println!("═══════════════════════════════════════════════════════════════");
         println!();
         
+        // Diagnostic information
+        if let Some(alias) = &self.config.bastion_alias {
+            println!("🔍 SSH Connection Diagnostics:");
+            self.run_ssh_diagnostics(alias).await;
+            println!();
+        }
+        
         let mut accessible_brokers = Vec::new();
         let connect_method = if self.config.bastion_alias.is_some() {
             "via SSH agent forwarding"
@@ -234,6 +246,31 @@ impl Scanner {
         
         if accessible_brokers.is_empty() {
             println!("\n⚠️  No brokers accessible via SSH.");
+            
+            // Provide helpful troubleshooting suggestions
+            match &self.config.bastion_alias {
+                Some(alias) => {
+                    println!("\n🔧 Troubleshooting suggestions:");
+                    println!("   1. Verify SSH config for '{}':", alias);
+                    println!("      ssh -v {} 'echo test'", alias);
+                    println!("   2. Test SSH agent forwarding:");
+                    println!("      ssh -A {} 'ssh-add -l'", alias);
+                    println!("   3. Test manual broker connection:");
+                    println!("      ssh -A {} 'ssh {}'", alias, self.config.brokers[0].hostname);
+                    println!("   4. Check if broker hostnames are resolvable from bastion:");
+                    println!("      ssh {} 'host {}'", alias, self.config.brokers[0].hostname);
+                }
+                None => {
+                    println!("\n🔧 Troubleshooting suggestions:");
+                    println!("   1. Test direct broker connection:");
+                    println!("      ssh {}", self.config.brokers[0].hostname);
+                    println!("   2. Check network connectivity:");
+                    println!("      ping {}", self.config.brokers[0].hostname);
+                }
+            }
+            
+            println!("\n💡 Despite connectivity issues, cluster-wide data was still collected successfully.");
+            println!("   This includes kafkactl output, metrics, and bastion system information.");
         } else {
             println!("\n✅ Found {} accessible broker(s)", accessible_brokers.len());
         }
@@ -324,42 +361,180 @@ impl Scanner {
         })
     }
     
+    /// Run SSH diagnostics to help debug connection issues
+    pub async fn run_ssh_diagnostics(&self, bastion_alias: &str) {
+        // Test bastion connectivity
+        print!("  • Bastion connectivity... ");
+        let bastion_test = Command::new("ssh")
+            .arg("-o")
+            .arg("ConnectTimeout=5")
+            .arg("-o")
+            .arg("StrictHostKeyChecking=no")
+            .arg(bastion_alias)
+            .arg("echo 'bastion-ok'")
+            .output();
+            
+        match bastion_test {
+            Ok(result) if result.status.success() => {
+                println!("✅ Connected");
+                let output = String::from_utf8_lossy(&result.stdout);
+                if !output.contains("bastion-ok") {
+                    println!("    ⚠️ Unexpected output: {}", output.trim());
+                }
+            }
+            Ok(result) => {
+                println!("❌ Failed (exit code: {})", result.status.code().unwrap_or(-1));
+                let stderr = String::from_utf8_lossy(&result.stderr);
+                if !stderr.is_empty() {
+                    println!("    Error: {}", stderr.trim());
+                }
+            }
+            Err(e) => {
+                println!("❌ Error executing SSH: {}", e);
+                return;
+            }
+        }
+        
+        // Test SSH agent forwarding
+        print!("  • SSH agent forwarding... ");
+        let agent_test = Command::new("ssh")
+            .arg("-A")
+            .arg("-o")
+            .arg("ConnectTimeout=5")
+            .arg("-o")
+            .arg("StrictHostKeyChecking=no")
+            .arg(bastion_alias)
+            .arg("ssh-add -l")
+            .output();
+            
+        match agent_test {
+            Ok(result) if result.status.success() => {
+                println!("✅ Working");
+                let output = String::from_utf8_lossy(&result.stdout);
+                let key_count = output.lines().count();
+                println!("    SSH keys available: {}", key_count);
+            }
+            Ok(result) => {
+                println!("❌ Failed");
+                let stderr = String::from_utf8_lossy(&result.stderr);
+                if stderr.contains("agent has no identities") {
+                    println!("    Issue: No SSH keys in agent");
+                    println!("    Solution: Run 'ssh-add ~/.ssh/your-key'");
+                } else if !stderr.is_empty() {
+                    println!("    Error: {}", stderr.trim());
+                }
+            }
+            Err(e) => {
+                println!("❌ Error: {}", e);
+            }
+        }
+        
+        // Test broker hostname resolution from bastion
+        let sample_broker = &self.config.brokers[0];
+        print!("  • Sample broker hostname resolution... ");
+        let resolve_test = Command::new("ssh")
+            .arg("-o")
+            .arg("ConnectTimeout=5")
+            .arg("-o")
+            .arg("StrictHostKeyChecking=no")
+            .arg(bastion_alias)
+            .arg(format!("host {} || getent hosts {} || echo 'resolution-failed'", 
+                sample_broker.hostname, sample_broker.hostname))
+            .output();
+            
+        match resolve_test {
+            Ok(result) if result.status.success() => {
+                let output = String::from_utf8_lossy(&result.stdout);
+                if output.contains("resolution-failed") {
+                    println!("❌ Cannot resolve {}", sample_broker.hostname);
+                    println!("    This suggests DNS or hostname configuration issues");
+                } else {
+                    println!("✅ {} resolves", sample_broker.hostname);
+                }
+            }
+            Ok(_) => {
+                println!("⚠️ Cannot test hostname resolution");
+            }
+            Err(e) => {
+                println!("❌ Error: {}", e);
+            }
+        }
+    }
+    
     /// Test if a broker is accessible via SSH
-    async fn test_broker_access(&self, broker: &BrokerInfo) -> bool {
-        match &self.config.bastion_alias {
+    pub async fn test_broker_access(&self, broker: &BrokerInfo) -> bool {
+        let result = match &self.config.bastion_alias {
             Some(alias) => {
                 // Remote bastion: test via SSH chain
+                let ssh_command = format!(
+                    "ssh -o ConnectTimeout=3 -o StrictHostKeyChecking=no {} 'true'",
+                    broker.hostname
+                );
+                
+                debug!("Testing SSH chain: ssh -A {} {}", alias, ssh_command);
+                
                 let output = Command::new("ssh")
                     .arg("-A")
+                    .arg("-o")
+                    .arg("ConnectTimeout=10")
+                    .arg("-o") 
+                    .arg("StrictHostKeyChecking=no")
                     .arg(alias)
-                    .arg(format!(
-                        "ssh -o ConnectTimeout=3 -o StrictHostKeyChecking=no {} 'true'",
-                        broker.hostname
-                    ))
+                    .arg(ssh_command)
                     .output();
                 
                 match output {
-                    Ok(result) => result.status.success(),
-                    Err(_) => false,
+                    Ok(result) => {
+                        if !result.status.success() {
+                            let stderr = String::from_utf8_lossy(&result.stderr);
+                            debug!("SSH chain failed for {}: {}", broker.hostname, stderr);
+                        }
+                        result.status.success()
+                    },
+                    Err(e) => {
+                        debug!("SSH chain error for {}: {}", broker.hostname, e);
+                        false
+                    }
                 }
             }
             None => {
                 // Local bastion: test direct SSH to broker
+                debug!("Testing direct SSH to {}", broker.hostname);
+                
                 let output = Command::new("ssh")
                     .arg("-o")
-                    .arg("ConnectTimeout=3")
+                    .arg("ConnectTimeout=10")
                     .arg("-o")
                     .arg("StrictHostKeyChecking=no")
+                    .arg("-o")
+                    .arg("BatchMode=yes")
                     .arg(&broker.hostname)
                     .arg("true")
                     .output();
                 
                 match output {
-                    Ok(result) => result.status.success(),
-                    Err(_) => false,
+                    Ok(result) => {
+                        if !result.status.success() {
+                            let stderr = String::from_utf8_lossy(&result.stderr);
+                            debug!("Direct SSH failed for {}: {}", broker.hostname, stderr);
+                        }
+                        result.status.success()
+                    },
+                    Err(e) => {
+                        debug!("Direct SSH error for {}: {}", broker.hostname, e);
+                        false
+                    }
                 }
             }
+        };
+        
+        if result {
+            debug!("✓ SSH access confirmed for {}", broker.hostname);
+        } else {
+            debug!("✗ SSH access failed for {}", broker.hostname);
         }
+        
+        result
     }
     
     /// Generate summary report

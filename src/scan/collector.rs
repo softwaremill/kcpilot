@@ -5,6 +5,8 @@ use std::path::PathBuf;
 use std::process::Command;
 
 use super::{BrokerData, BrokerInfo, ClusterData};
+use super::log_discovery::LogDiscovery;
+use super::enhanced_log_discovery::EnhancedLogDiscovery;
 
 /// Collector for bastion-level data (kafkactl, metrics, etc.)
 pub struct BastionCollector {
@@ -201,6 +203,163 @@ impl BrokerCollector {
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
     }
     
+    /// Extract Kafka config path from process command line
+    fn extract_config_from_process(&self, ps_output: &str) -> Option<String> {
+        // Look for common patterns in Kafka startup commands
+        let line = ps_output.lines().next()?;
+        
+        // Pattern 1: kafka-server-start.sh /path/to/server.properties
+        if let Some(server_start_pos) = line.find("kafka-server-start") {
+            let after_start = &line[server_start_pos..];
+            let parts: Vec<&str> = after_start.split_whitespace().collect();
+            for (i, part) in parts.iter().enumerate() {
+                if part.ends_with("server.properties") && i > 0 {
+                    return Some(part.to_string());
+                }
+            }
+        }
+        
+        // Pattern 2: Direct java invocation with config file
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        for (i, part) in parts.iter().enumerate() {
+            if part.ends_with("server.properties") && i > 0 {
+                return Some(part.to_string());
+            }
+        }
+        
+        // Pattern 3: Look for --override or config parameters
+        for (i, part) in parts.iter().enumerate() {
+            if *part == "--override" && i + 1 < parts.len() {
+                let next_part = parts[i + 1];
+                if next_part.contains("server.properties") || next_part.starts_with("config") {
+                    // Extract the config file path
+                    if let Some(eq_pos) = next_part.find('=') {
+                        return Some(next_part[eq_pos + 1..].to_string());
+                    }
+                }
+            }
+        }
+        
+        None
+    }
+
+    /// Enhanced config discovery - parse process arguments to get actual runtime config files
+    async fn collect_configs_enhanced_discovery(&self, ps_output: &str) -> Result<HashMap<String, (String, String)>> {
+        let mut configs = HashMap::new();
+        
+        // Parse the process command line like enhanced log discovery does
+        let line = ps_output.lines().next().ok_or_else(|| anyhow::anyhow!("No process output"))?;
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        
+        // Extract server.properties path from command line arguments
+        for part in parts.iter() {
+            // Look for server.properties file arguments
+            if part.ends_with("server.properties") {
+                if let Ok(content) = self.run_on_broker(&format!("sudo cat '{}' 2>/dev/null", part)) {
+                    if !content.is_empty() && !content.contains("No such file") {
+                        configs.insert("server.properties".to_string(), (content, part.to_string()));
+                    }
+                }
+                break;
+            }
+        }
+        
+        // Extract log4j configuration path from JVM arguments
+        for part in parts {
+            if part.contains("log4j.configuration=") {
+                if let Some(eq_pos) = part.find('=') {
+                    let log4j_path = &part[eq_pos + 1..];
+                    let clean_path = log4j_path.strip_prefix("file:").unwrap_or(log4j_path);
+                    
+                    if let Ok(content) = self.run_on_broker(&format!("sudo cat '{}' 2>/dev/null", clean_path)) {
+                        if !content.is_empty() && !content.contains("No such file") {
+                            configs.insert("log4j.properties".to_string(), (content, clean_path.to_string()));
+                        }
+                    }
+                }
+            }
+            if part.contains("log4j2.configurationFile=") {
+                if let Some(eq_pos) = part.find('=') {
+                    let log4j_path = &part[eq_pos + 1..];
+                    
+                    if let Ok(content) = self.run_on_broker(&format!("sudo cat '{}' 2>/dev/null", log4j_path)) {
+                        if !content.is_empty() && !content.contains("No such file") {
+                            configs.insert("log4j2.xml".to_string(), (content, log4j_path.to_string()));
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Get systemd service information - extract PID first
+        if let Some(pid_str) = self.extract_pid_from_ps_output(ps_output) {
+            if let Ok(pid) = pid_str.parse::<u32>() {
+                // Get systemd service name using the PID
+                if let Ok(systemctl_output) = self.run_on_broker(&format!("systemctl status {} 2>/dev/null", pid)) {
+                    if let Some(service_name) = self.extract_service_name_from_systemctl(&systemctl_output) {
+                        // Get the full service configuration
+                        if let Ok(service_content) = self.run_on_broker(&format!("systemctl cat {} 2>/dev/null", service_name)) {
+                            configs.insert("kafka.service".to_string(), (service_content, service_name.clone()));
+                        }
+                        
+                        // Try to get environment file if mentioned in service
+                        if let Ok(service_cat_output) = self.run_on_broker(&format!("systemctl cat {} 2>/dev/null", service_name)) {
+                            if let Some(env_file_path) = self.extract_environment_file_from_service(&service_cat_output) {
+                                if let Ok(env_content) = self.run_on_broker(&format!("sudo cat '{}' 2>/dev/null", env_file_path)) {
+                                    if !env_content.is_empty() && !env_content.contains("No such file") {
+                                        configs.insert("kafka.env".to_string(), (env_content, env_file_path));
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        Ok(configs)
+    }
+
+    /// Extract PID from ps aux output
+    fn extract_pid_from_ps_output(&self, ps_output: &str) -> Option<String> {
+        let line = ps_output.lines().next()?;
+        let parts: Vec<&str> = line.split_whitespace().collect();
+        if parts.len() >= 2 {
+            Some(parts[1].to_string()) // PID is second column in ps aux
+        } else {
+            None
+        }
+    }
+
+    /// Extract systemd service name from systemctl status output
+    fn extract_service_name_from_systemctl(&self, systemctl_output: &str) -> Option<String> {
+        for line in systemctl_output.lines() {
+            if line.contains("Loaded:") {
+                // Look for service file path in Loaded line
+                if let Some(start) = line.find('/') {
+                    if let Some(end) = line[start..].find(';') {
+                        let service_path = &line[start..start + end];
+                        if let Some(filename) = service_path.split('/').last() {
+                            return Some(filename.to_string());
+                        }
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    /// Extract environment file path from systemd service configuration
+    fn extract_environment_file_from_service(&self, service_content: &str) -> Option<String> {
+        for line in service_content.lines() {
+            if line.trim().starts_with("EnvironmentFile=") {
+                let env_file = line.trim().strip_prefix("EnvironmentFile=")?;
+                return Some(env_file.trim_matches('"').to_string());
+            }
+        }
+        None
+    }
+    
     /// Collect all data from this broker
     pub async fn collect_all(&self) -> Result<BrokerData> {
         let broker_dir = self.output_dir.join("brokers").join(format!("broker_{}", self.broker.id));
@@ -268,61 +427,267 @@ impl BrokerCollector {
         }
         println!("✓");
         
-        // 3. Configuration files
-        print!("  📝 Configuration files... ");
+        // 3. Configuration files - Using enhanced discovery first, fallback to find
+        print!("  📝 Configuration files (enhanced discovery)... ");
         let mut configs = HashMap::new();
         
-        let config_paths = vec![
-            "/etc/kafka/server.properties",
-            "/opt/kafka/config/server.properties",
-            "/usr/hdp/current/kafka-broker/conf/server.properties",
-        ];
+        // Try enhanced discovery first - parse Kafka process for actual runtime config paths
+        let mut server_props_found = false;
+        let mut log4j_found = false;
+        let mut service_found = false;
         
-        for path in config_paths {
-            if let Ok(content) = self.run_on_broker(&format!("cat {} 2>/dev/null", path)) {
-                if !content.is_empty() && !content.contains("No such file") {
-                    fs::write(broker_dir.join("configs").join("server.properties"), &content)?;
-                    configs.insert("server.properties".to_string(), content);
+        if let Ok(ps_output) = self.run_on_broker("ps aux | grep -E 'kafka\\.Kafka[^a-zA-Z]' | grep -v grep") {
+            let enhanced_configs = self.collect_configs_enhanced_discovery(&ps_output).await;
+            
+            if let Ok(enhanced_configs) = enhanced_configs {
+                for (filename, (content, source)) in enhanced_configs {
+                    fs::write(broker_dir.join("configs").join(&filename), &content)?;
+                    configs.insert(filename.clone(), content);
+                    configs.insert(format!("{}_source", filename.replace('.', "_")), format!("enhanced:{}", source));
+                    
+                    match filename.as_str() {
+                        "server.properties" => server_props_found = true,
+                        "log4j.properties" => log4j_found = true,
+                        "kafka.service" => service_found = true,
+                        _ => {}
+                    }
+                }
+                
+                if configs.len() > 0 {
+                    println!("✅ Enhanced discovery found {} config files", configs.len());
+                }
+            }
+        }
+        
+        // Fallback: Use find command for any missing config files
+        if !server_props_found {
+            println!("⚠️  Enhanced discovery failed for server.properties, falling back to find");
+            let find_commands = vec![
+                "find /etc -name 'server.properties' 2>/dev/null | head -1",
+                "find /opt -name 'server.properties' 2>/dev/null | head -1", 
+                "find /usr -name 'server.properties' 2>/dev/null | head -1",
+                "find /home -name 'server.properties' 2>/dev/null | head -1",
+            ];
+            
+            for find_cmd in find_commands {
+                if let Ok(output) = self.run_on_broker(find_cmd) {
+                    let config_path = output.trim();
+                    if !config_path.is_empty() {
+                        if let Ok(content) = self.run_on_broker(&format!("sudo cat '{}' 2>/dev/null", config_path)) {
+                            if !content.is_empty() && !content.contains("No such file") {
+                                fs::write(broker_dir.join("configs").join("server.properties"), &content)?;
+                                configs.insert("server.properties".to_string(), content);
+                                configs.insert("server_properties_source".to_string(), format!("fallback_find:{}", config_path));
+                                server_props_found = true;
+                                println!("✅ Found server.properties via find fallback: {}", config_path);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Method 3: Fallback to standard locations
+        if !server_props_found {
+            let standard_paths = vec![
+                "/etc/kafka/server.properties",
+                "/opt/kafka/config/server.properties",
+                "/usr/local/kafka/config/server.properties",
+                "/usr/hdp/current/kafka-broker/conf/server.properties",
+                "/opt/confluent/etc/kafka/server.properties",
+            ];
+            
+            for path in standard_paths {
+                if let Ok(content) = self.run_on_broker(&format!("cat {} 2>/dev/null", path)) {
+                    if !content.is_empty() && !content.contains("No such file") {
+                        fs::write(broker_dir.join("configs").join("server.properties"), &content)?;
+                        configs.insert("server.properties".to_string(), content);
+                        configs.insert("config_source".to_string(), format!("standard:{}", path));
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Fallback for log4j configuration if enhanced discovery missed it
+        if !log4j_found {
+            println!("⚠️  Enhanced discovery failed for log4j.properties, falling back to find");
+            let log4j_locations = vec![
+                "find /etc -name 'log4j*.properties' 2>/dev/null | head -1",
+                "find /opt -name 'log4j*.properties' 2>/dev/null | head -1",
+            ];
+            
+            for cmd in log4j_locations {
+                if let Ok(output) = self.run_on_broker(cmd) {
+                    let log4j_path = output.trim();
+                    if !log4j_path.is_empty() && log4j_path != "log4j*.properties" {
+                        if let Ok(content) = self.run_on_broker(&format!("sudo cat '{}' 2>/dev/null", log4j_path)) {
+                            if !content.is_empty() && !content.contains("No such file") {
+                                fs::write(broker_dir.join("configs").join("log4j.properties"), &content)?;
+                                configs.insert("log4j.properties".to_string(), content);
+                                configs.insert("log4j_properties_source".to_string(), format!("fallback_find:{}", log4j_path));
+                                log4j_found = true;
+                                println!("✅ Found log4j.properties via find fallback: {}", log4j_path);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Fallback for systemd service file if enhanced discovery missed it
+        if !service_found {
+            println!("⚠️  Enhanced discovery failed for kafka.service, falling back to standard paths");
+            let service_names = vec!["kafka", "kafka.service", "confluent-kafka", "apache-kafka"];
+            for service_name in service_names {
+                let service_paths = vec![
+                    format!("/etc/systemd/system/{}", service_name),
+                    format!("/lib/systemd/system/{}", service_name),  
+                    format!("/usr/lib/systemd/system/{}", service_name),
+                ];
+                
+                for service_path in service_paths {
+                    if let Ok(content) = self.run_on_broker(&format!("sudo cat '{}' 2>/dev/null", service_path)) {
+                        if !content.is_empty() && !content.contains("No such file") {
+                            fs::write(broker_dir.join("configs").join("kafka.service"), &content)?;
+                            configs.insert("kafka.service".to_string(), content);
+                            configs.insert("kafka_service_source".to_string(), format!("fallback_standard:{}", service_path));
+                            service_found = true;
+                            println!("✅ Found kafka.service via standard paths: {}", service_path);
+                            break;
+                        }
+                    }
+                }
+                if service_found {
                     break;
                 }
             }
         }
         
-        // Collect other config files
-        if let Ok(log4j) = self.run_on_broker("cat /etc/kafka/log4j.properties 2>/dev/null") {
-            if !log4j.is_empty() && !log4j.contains("No such file") {
-                fs::write(broker_dir.join("configs").join("log4j.properties"), &log4j)?;
-                configs.insert("log4j.properties".to_string(), log4j);
-            }
+        let enhanced_count = configs.values().filter(|v| v.contains("enhanced:")).count();
+        let fallback_count = configs.len() - enhanced_count;
+        
+        if enhanced_count > 0 && fallback_count > 0 {
+            println!("✓ (found {} config files: {} enhanced, {} fallback)", configs.len(), enhanced_count, fallback_count);
+        } else if enhanced_count > 0 {
+            println!("✓ (found {} config files via enhanced discovery)", configs.len());
+        } else {
+            println!("✓ (found {} config files via fallback methods)", configs.len());
         }
         
-        if let Ok(service) = self.run_on_broker("cat /etc/systemd/system/kafka.service 2>/dev/null") {
-            if !service.is_empty() && !service.contains("No such file") {
-                fs::write(broker_dir.join("configs").join("kafka.service"), &service)?;
-                configs.insert("kafka.service".to_string(), service);
-            }
-        }
-        println!("✓");
-        
-        // 4. Log files
-        print!("  📜 Log files... ");
+        // 4. Log files - Using enhanced discovery (process → systemd → config → logs)
+        print!("  📜 Log files (enhanced discovery)... ");
         let mut logs = HashMap::new();
         
-        let log_commands = vec![
-            ("server.log", "tail -500 /var/log/kafka/server.log 2>/dev/null"),
-            ("controller.log", "tail -500 /var/log/kafka/controller.log 2>/dev/null"),
-            ("journald.log", "journalctl -u kafka -n 500 --no-pager 2>/dev/null"),
-        ];
+        // Initialize enhanced log discovery with the current SSH setup
+        let ssh_target = if let Some(bastion) = &self.bastion_alias {
+            Some(format!("{} ssh -o StrictHostKeyChecking=no {}", bastion, self.broker.hostname))
+        } else {
+            Some(self.broker.hostname.clone())
+        };
         
-        for (name, cmd) in log_commands {
-            if let Ok(content) = self.run_on_broker(cmd) {
-                if !content.is_empty() {
-                    fs::write(broker_dir.join("logs").join(name), &content)?;
-                    logs.insert(name.to_string(), content);
+        let enhanced_discovery = EnhancedLogDiscovery::new(ssh_target.clone());
+        
+        // Run the enhanced discovery chain
+        match enhanced_discovery.discover_logs().await {
+            Ok(discovery_result) => {
+                // Save comprehensive discovery metadata
+                let discovery_json = serde_json::to_string_pretty(&discovery_result)?;
+                fs::write(broker_dir.join("logs").join("enhanced_discovery_metadata.json"), discovery_json)?;
+                
+                // Use discovered logs
+                logs = discovery_result.discovered_logs;
+                
+                // Write individual log files
+                for (log_name, log_content) in &logs {
+                    if !log_content.trim().is_empty() {
+                        // Create safe filename
+                        let safe_name = log_name
+                            .replace('/', "_")
+                            .replace(' ', "_")
+                            .trim_start_matches('_')
+                            .to_string();
+                        let final_name = if safe_name.is_empty() {
+                            "unknown.log".to_string()
+                        } else if safe_name.len() > 100 {
+                            format!("{}.log", &safe_name[..97])
+                        } else {
+                            safe_name
+                        };
+                        
+                        fs::write(broker_dir.join("logs").join(&final_name), log_content)?;
+                    }
+                }
+                
+                if logs.is_empty() {
+                    // Ultimate fallback to basic journald
+                    if let Ok(content) = self.run_on_broker("journalctl -n 500 --no-pager 2>/dev/null | grep -i kafka") {
+                        if !content.is_empty() {
+                            fs::write(broker_dir.join("logs").join("system_journald.log"), &content)?;
+                            logs.insert("system_journald_fallback".to_string(), content);
+                        }
+                    }
+                }
+                
+                // Report discovery success
+                let steps = discovery_result.discovery_steps.len();
+                let warnings = discovery_result.warnings.len();
+                if warnings > 0 {
+                    println!("✓ ({} logs, {} steps, {} warnings)", logs.len(), steps, warnings);
+                } else {
+                    println!("✓ ({} logs, {} discovery steps)", logs.len(), steps);
+                }
+            }
+            Err(e) => {
+                println!("⚠️ (enhanced discovery failed: {}, using legacy fallback)", e);
+                
+                // Fallback to the previous dynamic discovery method
+                let fallback_discovery = LogDiscovery::new(ssh_target);
+                match fallback_discovery.discover_logs().await {
+                    Ok(discovered_logs) => {
+                        match fallback_discovery.collect_log_contents(&discovered_logs, 500).await {
+                            Ok(log_contents) => {
+                                for (log_path, content) in log_contents {
+                                    if !content.trim().is_empty() {
+                                        let safe_name = log_path.replace('/', "_").trim_start_matches('_').to_string();
+                                        fs::write(broker_dir.join("logs").join(&safe_name), &content)?;
+                                        logs.insert(log_path, content);
+                                    }
+                                }
+                            }
+                            Err(_) => {
+                                // Final fallback to hardcoded paths
+                                let hardcoded_commands = vec![
+                                    ("server.log", "tail -500 /var/log/kafka/server.log 2>/dev/null"),
+                                    ("controller.log", "tail -500 /var/log/kafka/controller.log 2>/dev/null"),
+                                    ("journald.log", "journalctl -u kafka -n 500 --no-pager 2>/dev/null"),
+                                ];
+                                
+                                for (name, cmd) in hardcoded_commands {
+                                    if let Ok(content) = self.run_on_broker(cmd) {
+                                        if !content.is_empty() {
+                                            fs::write(broker_dir.join("logs").join(name), &content)?;
+                                            logs.insert(format!("hardcoded_{}", name), content);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    Err(_) => {
+                        // Final system-wide journald fallback
+                        if let Ok(content) = self.run_on_broker("journalctl -n 500 --no-pager 2>/dev/null | grep -i kafka") {
+                            if !content.is_empty() {
+                                fs::write(broker_dir.join("logs").join("system_kafka_logs.log"), &content)?;
+                                logs.insert("system_kafka_logs".to_string(), content);
+                            }
+                        }
+                    }
                 }
             }
         }
-        println!("✓");
         
         // 5. Data directories
         print!("  💾 Data directories... ");

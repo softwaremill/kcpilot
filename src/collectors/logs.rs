@@ -1,4 +1,5 @@
 use super::{Collector, CollectorError, CollectorResult, KafkaConfig};
+use crate::scan::log_discovery::LogDiscovery;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -39,6 +40,8 @@ impl LogCollector {
     }
 
     fn default_log_paths() -> Vec<PathBuf> {
+        // This method is now deprecated in favor of dynamic discovery
+        // Keeping for backward compatibility only
         vec![
             PathBuf::from("/var/log/kafka/server.log"),
             PathBuf::from("/var/log/kafka/controller.log"),
@@ -47,6 +50,16 @@ impl LogCollector {
             PathBuf::from("/opt/kafka/logs/server.log"),
             PathBuf::from("./logs/kafka.log"),
         ]
+    }
+
+    /// Create a new LogCollector with dynamic log discovery
+    /// This method is preferred over new() as it discovers logs dynamically
+    pub fn with_dynamic_discovery() -> Self {
+        Self {
+            log_paths: Vec::new(), // Will be discovered dynamically
+            max_lines_per_file: 1000,
+            patterns: Self::default_patterns(),
+        }
     }
 
     fn default_patterns() -> Vec<String> {
@@ -217,7 +230,7 @@ impl Collector for LogCollector {
     type Output = LogCollectorOutput;
 
     async fn collect(&self, config: &Self::Config) -> CollectorResult<Self::Output> {
-        info!("Starting log collection");
+        info!("Starting log collection with dynamic discovery");
         
         let mut all_logs = HashMap::new();
         let mut total_entries = 0;
@@ -226,11 +239,45 @@ impl Collector for LogCollector {
         let mut files_processed = 0;
         let mut pattern_counts = HashMap::new();
         
-        // Collect from local files
-        let paths = if config.log_paths.is_empty() {
-            &self.log_paths
-        } else {
+        // Determine which paths to use
+        let default_paths;
+        let paths = if !config.log_paths.is_empty() {
+            // Use configured paths if provided
             &config.log_paths
+        } else if !self.log_paths.is_empty() {
+            // Use collector's default paths
+            &self.log_paths  
+        } else {
+            // Use dynamic discovery
+            info!("Using dynamic log discovery");
+            
+            let log_discovery = LogDiscovery::new(None);
+            default_paths = match log_discovery.discover_logs().await {
+                Ok(discovered_logs) => {
+                    info!("Dynamic discovery found {} log files", discovered_logs.log_files.len());
+                    
+                    // Extract accessible log paths
+                    let mut paths = Vec::new();
+                    for (path_str, log_info) in &discovered_logs.log_files {
+                        if log_info.accessible {
+                            paths.push(PathBuf::from(path_str));
+                        }
+                    }
+                    
+                    if paths.is_empty() {
+                        warn!("No accessible logs found via dynamic discovery, using fallback");
+                        Self::default_log_paths()
+                    } else {
+                        paths
+                    }
+                }
+                Err(e) => {
+                    warn!("Dynamic log discovery failed: {}, using fallback", e);
+                    Self::default_log_paths()
+                }
+            };
+            
+            &default_paths
         };
         
         for path in paths {
