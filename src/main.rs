@@ -27,7 +27,7 @@ async fn main() -> Result<()> {
         Commands::Scan {
             bastion,
             output,
-            ..
+            broker,
         } => {
             info!("Starting Kafka cluster scan");
             
@@ -38,6 +38,12 @@ async fn main() -> Result<()> {
             // Set custom output directory if provided
             if let Some(output_path) = output {
                 scanner = scanner.with_output_dir(output_path);
+            }
+            
+            // If a single broker is provided, discover the full cluster from it
+            if let Some(broker_address) = broker {
+                info!("Using broker discovery from: {}", broker_address);
+                scanner = scanner.discover_brokers_from_single(&broker_address).await?;
             }
             
             // Run the scan

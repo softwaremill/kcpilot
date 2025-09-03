@@ -32,6 +32,10 @@ pub enum Commands {
         /// Output directory for the scan results
         #[arg(short, long)]
         output: Option<PathBuf>,
+        
+        /// Single broker hostname:port to discover cluster from. If not provided, uses hardcoded broker list
+        #[arg(long)]
+        broker: Option<String>,
     },
     
     /// Analyze a previously collected snapshot

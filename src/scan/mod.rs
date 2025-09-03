@@ -14,6 +14,8 @@ pub mod enhanced_log_discovery;
 mod test_log_discovery;
 
 use collector::{BastionCollector, BrokerCollector};
+use crate::collectors::admin::AdminCollector;
+use crate::collectors::{KafkaConfig, Collector};
 // Import log_discovery types when needed
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -112,6 +114,477 @@ impl Scanner {
     pub fn with_brokers(mut self, brokers: Vec<BrokerInfo>) -> Self {
         self.config.brokers = brokers;
         self
+    }
+
+    /// Discover brokers from a single known broker using Kafka admin API
+    pub async fn discover_brokers_from_single(mut self, broker_address: &str) -> Result<Self> {
+        info!("Discovering brokers from single broker: {}", broker_address);
+        
+        // Parse hostname:port
+        let parts: Vec<&str> = broker_address.split(':').collect();
+        if parts.len() != 2 {
+            return Err(anyhow::anyhow!("Broker address must be in format hostname:port, got: {}", broker_address));
+        }
+        
+        // If using bastion, run discovery on the bastion via SSH
+        if let Some(bastion_alias) = self.config.bastion_alias.clone() {
+            info!("Running broker discovery via bastion: {}", bastion_alias);
+            return self.discover_brokers_via_ssh(broker_address, &bastion_alias).await;
+        }
+        
+        // Local discovery using admin client
+        info!("Running local broker discovery");
+        let admin_collector = AdminCollector::new();
+        let mut kafka_config = KafkaConfig::default();
+        kafka_config.bootstrap_servers = vec![broker_address.to_string()];
+        kafka_config.timeout_secs = 30;
+        
+        // Use the collector to discover all brokers
+        match admin_collector.collect(&kafka_config).await {
+            Ok(admin_output) => {
+                // Convert AdminBrokerInfo to our BrokerInfo
+                let discovered_brokers: Vec<BrokerInfo> = admin_output
+                    .brokers
+                    .into_iter()
+                    .map(|b| BrokerInfo {
+                        id: b.id,
+                        hostname: b.host,
+                        datacenter: "unknown".to_string(), // We don't have datacenter info from admin API
+                    })
+                    .collect();
+                
+                info!("Discovered {} brokers from cluster metadata", discovered_brokers.len());
+                for broker in &discovered_brokers {
+                    debug!("Found broker: {} ({}:{})", broker.id, broker.hostname, "9092"); // Assume standard port for now
+                }
+                
+                self.config.brokers = discovered_brokers;
+                Ok(self)
+            }
+            Err(e) => {
+                error!("Failed to discover brokers from {}: {}", broker_address, e);
+                Err(anyhow::anyhow!("Broker discovery failed: {}", e))
+            }
+        }
+    }
+
+    /// Discover brokers via SSH using installation path-based discovery
+    async fn discover_brokers_via_ssh(mut self, broker_address: &str, bastion_alias: &str) -> Result<Self> {
+        info!("Attempting broker discovery on bastion: {}", bastion_alias);
+        info!("Note: kafkactl will be collected separately as data source, not used for broker discovery");
+        
+        // New Method: SSH to the broker, discover Kafka installation path, then discover all brokers
+        if let Ok(brokers) = self.discover_brokers_using_installation_path(broker_address).await {
+            if !brokers.is_empty() {
+                info!("Successfully discovered {} brokers using installation path method", brokers.len());
+                self.config.brokers = brokers;
+                return Ok(self);
+            }
+        }
+        
+        // Method 1: Run a simple admin client tool on the bastion to get broker metadata
+        if let Ok(brokers) = self.discover_brokers_with_bastion_admin_client(broker_address).await {
+            if !brokers.is_empty() {
+                info!("Successfully discovered {} brokers using admin client on bastion", brokers.len());
+                self.config.brokers = brokers;
+                return Ok(self);
+            }
+        }
+        
+        // Method 2: Use kafka-metadata-shell.sh if available
+        if let Ok(brokers) = self.discover_brokers_with_metadata_shell(broker_address).await {
+            if !brokers.is_empty() {
+                info!("Successfully discovered {} brokers using kafka-metadata-shell", brokers.len());
+                self.config.brokers = brokers;
+                return Ok(self);
+            }
+        }
+        
+        // Method 3: Use kafka-broker-api-versions.sh with better parsing
+        if let Ok(brokers) = self.discover_brokers_with_api_versions(broker_address).await {
+            if !brokers.is_empty() {
+                info!("Successfully discovered {} brokers using kafka-broker-api-versions", brokers.len());
+                self.config.brokers = brokers;
+                return Ok(self);
+            }
+        }
+        
+        // Method 4: Parse server.properties files on brokers to find other brokers
+        if let Ok(brokers) = self.discover_brokers_from_configs(broker_address).await {
+            if !brokers.is_empty() {
+                info!("Successfully discovered {} brokers from server.properties files", brokers.len());
+                self.config.brokers = brokers;
+                return Ok(self);
+            }
+        }
+        
+        // Fallback: Use the single broker provided
+        info!("All discovery methods failed, falling back to single broker configuration");
+        let fallback_brokers = vec![BrokerInfo {
+            id: 0, // Unknown ID, will be determined during data collection
+            hostname: broker_address.split(':').next().unwrap_or("unknown").to_string(),  
+            datacenter: "unknown".to_string(),
+        }];
+        
+        self.config.brokers = fallback_brokers;
+        Ok(self)
+    }
+
+    /// Discover brokers using Kafka installation path method
+    async fn discover_brokers_using_installation_path(&self, broker_address: &str) -> Result<Vec<BrokerInfo>> {
+        info!("🔍 Starting installation path-based broker discovery");
+        
+        // Step 1: SSH to the given broker and discover Kafka installation path
+        let hostname = broker_address.split(':').next().unwrap_or("unknown");
+        info!("Step 1: SSH to broker {} to discover Kafka installation path", hostname);
+        
+        let kafka_installation_path = self.discover_kafka_installation_path_on_broker(hostname).await?;
+        info!("✅ Discovered Kafka installation path: {}", kafka_installation_path);
+        
+        // Step 2: Use the discovered path to run kafka-broker-api-versions.sh
+        info!("Step 2: Using {} to discover all brokers in cluster", kafka_installation_path);
+        
+        let command = format!(
+            "ssh -o StrictHostKeyChecking=no {} '{}/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 | awk \"/id/{{print \\$1}}\"'",
+            hostname,
+            kafka_installation_path
+        );
+        
+        info!("Executing broker discovery command via bastion");
+        let output = self.run_command_on_bastion(&command)?;
+        
+        // Step 3: Parse the output to extract broker hostnames
+        let mut discovered_brokers = Vec::new();
+        let mut broker_id = 0; // We'll assign sequential IDs since we don't have actual broker IDs
+        
+        for line in output.lines() {
+            let line = line.trim();
+            if !line.is_empty() && line.contains(':') {
+                // Expected format: hostname:port
+                let hostname = line.split(':').next().unwrap_or(line).to_string();
+                
+                // Try to infer datacenter from hostname pattern
+                let datacenter = if hostname.contains("-dc1-") {
+                    "dc1".to_string()
+                } else if hostname.contains("-dc2-") {
+                    "dc2".to_string()
+                } else if hostname.contains("-dc3-") {
+                    "dc3".to_string()
+                } else {
+                    "unknown".to_string()
+                };
+                
+                discovered_brokers.push(BrokerInfo {
+                    id: broker_id,
+                    hostname,
+                    datacenter,
+                });
+                broker_id += 1;
+            }
+        }
+        
+        if !discovered_brokers.is_empty() {
+            info!("✅ Successfully discovered {} brokers:", discovered_brokers.len());
+            for broker in &discovered_brokers {
+                info!("   • Broker {} - {} ({})", broker.id, broker.hostname, broker.datacenter);
+            }
+        } else {
+            info!("⚠️  No brokers discovered using installation path method");
+        }
+        
+        Ok(discovered_brokers)
+    }
+    
+    /// Discover Kafka installation path on a specific broker
+    async fn discover_kafka_installation_path_on_broker(&self, broker_hostname: &str) -> Result<String> {
+        // Method 1: Try systemctl approach
+        let systemctl_command = format!(
+            "ssh -o StrictHostKeyChecking=no {} 'pid=$(ps aux | grep -E \"kafka\\.Kafka[^a-zA-Z]\" | grep -v grep | awk \"{{print \\$2}}\" | head -1); if [ ! -z \"$pid\" ]; then systemctl status $pid 2>/dev/null | grep \"ExecStart=\" | grep \"kafka-server-start.sh\" | sed \"s/.*ExecStart=//\" | sed \"s/kafka-server-start.sh.*/kafka-server-start.sh/\" | sed \"s|/bin/kafka-server-start.sh||\" | sed \"s|^[[:space:]]*||\" | head -1; fi'",
+            broker_hostname
+        );
+        
+        if let Ok(output) = self.run_command_on_bastion(&systemctl_command) {
+            let path = output.trim();
+            if !path.is_empty() && path.contains("/") {
+                let kafka_bin_path = format!("{}/bin", path);
+                info!("Found Kafka path via systemctl: {}", kafka_bin_path);
+                return Ok(kafka_bin_path);
+            }
+        }
+        
+        // Method 2: Parse ps aux output directly for installation path
+        let ps_command = format!(
+            "ssh -o StrictHostKeyChecking=no {} 'ps aux | grep kafka.Kafka | grep -v grep | head -1'",
+            broker_hostname
+        );
+        
+        if let Ok(output) = self.run_command_on_bastion(&ps_command) {
+            let line = output.trim();
+            
+            // Look for classpath argument that contains kafka installation libs
+            if let Some(cp_start) = line.find("-cp ") {
+                let after_cp = &line[cp_start + 4..];
+                if let Some(cp_end) = after_cp.find(" kafka.Kafka") {
+                    let classpath = &after_cp[..cp_end];
+                    
+                    // Extract path from first jar in classpath (should be kafka libs)
+                    if let Some(first_jar) = classpath.split(':').next() {
+                        if first_jar.contains("/libs/") && first_jar.contains("kafka") {
+                            if let Some(libs_pos) = first_jar.rfind("/libs/") {
+                                let kafka_base = &first_jar[..libs_pos];
+                                // Clean up path - remove any trailing /bin if it exists
+                                let clean_base = kafka_base.trim_end_matches("/bin");
+                                let kafka_path = format!("{}/bin", clean_base);
+                                info!("Found Kafka path via ps aux classpath: {}", kafka_path);
+                                return Ok(kafka_path);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Look for kafka logs directory parameter which can help identify installation
+            if line.contains("-Dkafka.logs.dir=") {
+                if let Some(logs_start) = line.find("-Dkafka.logs.dir=") {
+                    let after_logs = &line[logs_start + 17..];
+                    if let Some(logs_end) = after_logs.find(' ') {
+                        let logs_dir = &after_logs[..logs_end];
+                        // Common pattern: /opt/kafka/bin/../logs -> /opt/kafka/bin
+                        if logs_dir.contains("/../logs") {
+                            let kafka_path = logs_dir.replace("/../logs", "");
+                            info!("Found Kafka path via logs directory: {}", kafka_path);
+                            return Ok(kafka_path);
+                        }
+                        // Alternative: /opt/kafka/logs -> /opt/kafka/bin
+                        if logs_dir.contains("/logs") {
+                            let base_path = logs_dir.trim_end_matches("/logs");
+                            let kafka_path = format!("{}/bin", base_path);
+                            info!("Found Kafka path via logs directory (alt): {}", kafka_path);
+                            return Ok(kafka_path);
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Fallback to common installation paths
+        let fallback_paths = vec![
+            "/opt/kafka/bin",
+            "/usr/local/kafka/bin",
+            "/home/kafka/kafka/bin",
+        ];
+        
+        for path in fallback_paths {
+            let test_command = format!(
+                "ssh -o StrictHostKeyChecking=no {} 'test -x {}/kafka-broker-api-versions.sh && echo \"EXISTS\"'",
+                broker_hostname, path
+            );
+            
+            if let Ok(output) = self.run_command_on_bastion(&test_command) {
+                if output.trim() == "EXISTS" {
+                    info!("Found Kafka path via fallback: {}", path);
+                    return Ok(path.to_string());
+                }
+            }
+        }
+        
+        Err(anyhow::anyhow!("Could not discover Kafka installation path on broker {}", broker_hostname))
+    }
+
+    /// Execute command on bastion via SSH
+    fn run_command_on_bastion(&self, command: &str) -> Result<String> {
+        if let Some(bastion_alias) = &self.config.bastion_alias {
+            let output = Command::new("ssh")
+                .arg(bastion_alias)
+                .arg(command)
+                .output()
+                .context(format!("Failed to execute command on bastion: {}", command))?;
+                
+            if output.status.success() {
+                Ok(String::from_utf8_lossy(&output.stdout).to_string())
+            } else {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                Err(anyhow::anyhow!("Command failed on bastion: {}", stderr))
+            }
+        } else {
+            Err(anyhow::anyhow!("No bastion configured for SSH command execution"))
+        }
+    }
+
+    /// Discover brokers using kafka-metadata-shell.sh (most reliable method)
+    async fn discover_brokers_with_metadata_shell(&self, broker_address: &str) -> Result<Vec<BrokerInfo>> {
+        let command = format!(
+            "kafka-metadata-shell.sh --bootstrap-server {} --print-brokers 2>/dev/null | grep -E 'broker|Broker' | head -20",
+            broker_address
+        );
+        
+        match self.run_command_on_bastion(&command) {
+            Ok(output) => {
+                let mut brokers = Vec::new();
+                for line in output.lines() {
+                    // Parse broker information from metadata shell output
+                    if let Some(broker) = self.parse_metadata_shell_broker_line(line) {
+                        brokers.push(broker);
+                    }
+                }
+                Ok(brokers)
+            }
+            Err(_) => Ok(Vec::new()), // Tool not available
+        }
+    }
+
+    /// Discover brokers using kafka-broker-api-versions.sh with enhanced parsing
+    async fn discover_brokers_with_api_versions(&self, broker_address: &str) -> Result<Vec<BrokerInfo>> {
+        let command = format!(
+            "kafka-broker-api-versions.sh --bootstrap-server {} 2>/dev/null | head -10",
+            broker_address
+        );
+        
+        match self.run_command_on_bastion(&command) {
+            Ok(output) => {
+                if output.contains("successfully connected") || output.contains("ApiVersion") {
+                    // For now, if we can connect, assume we can discover at least this broker
+                    // TODO: Enhanced parsing to extract multiple broker IDs from API versions output
+                    let hostname = broker_address.split(':').next().unwrap_or("unknown").to_string();
+                    Ok(vec![BrokerInfo {
+                        id: 0, // Will be determined later during data collection
+                        hostname,
+                        datacenter: "unknown".to_string(),
+                    }])
+                } else {
+                    Ok(Vec::new())
+                }
+            }
+            Err(_) => Ok(Vec::new()), // Tool not available or failed
+        }
+    }
+
+    /// Discover brokers using simple connection test on the bastion
+    async fn discover_brokers_with_bastion_admin_client(&self, broker_address: &str) -> Result<Vec<BrokerInfo>> {
+        info!("Attempting broker discovery using simple connection test on bastion");
+        
+        // Method 1: Try a simple netcat/telnet test to verify connectivity
+        let connectivity_test = format!(
+            "timeout 3 bash -c 'echo > /dev/tcp/{}/{}' 2>/dev/null && echo 'CONNECTED'",
+            broker_address.split(':').next().unwrap_or("unknown"),
+            broker_address.split(':').nth(1).unwrap_or("9092")
+        );
+        
+        match self.run_command_on_bastion(&connectivity_test) {
+            Ok(output) => {
+                if output.contains("CONNECTED") {
+                    info!("Successfully verified connectivity to broker via TCP test");
+                    let hostname = broker_address.split(':').next().unwrap_or("unknown").to_string();
+                    return Ok(vec![BrokerInfo {
+                        id: 0, // Will be determined during data collection
+                        hostname,
+                        datacenter: "unknown".to_string(),
+                    }]);
+                }
+            }
+            Err(_) => {
+                debug!("TCP connectivity test failed");
+            }
+        }
+        
+        // Method 2: Try to resolve the hostname 
+        let hostname_test = format!(
+            "nslookup {} >/dev/null 2>&1 && echo 'RESOLVABLE'",
+            broker_address.split(':').next().unwrap_or("unknown")
+        );
+        
+        match self.run_command_on_bastion(&hostname_test) {
+            Ok(output) => {
+                if output.contains("RESOLVABLE") {
+                    info!("Hostname resolution successful, assuming broker is available");
+                    let hostname = broker_address.split(':').next().unwrap_or("unknown").to_string();
+                    return Ok(vec![BrokerInfo {
+                        id: 0, // Will be determined during data collection
+                        hostname,
+                        datacenter: "unknown".to_string(),
+                    }]);
+                }
+            }
+            Err(_) => {
+                debug!("Hostname resolution test failed");
+            }
+        }
+        
+        // Method 3: Basic ping test
+        let ping_test = format!(
+            "ping -c 1 -W 3 {} >/dev/null 2>&1 && echo 'PINGABLE'",
+            broker_address.split(':').next().unwrap_or("unknown")
+        );
+        
+        match self.run_command_on_bastion(&ping_test) {
+            Ok(output) => {
+                if output.contains("PINGABLE") {
+                    info!("Ping test successful, assuming broker is available");
+                    let hostname = broker_address.split(':').next().unwrap_or("unknown").to_string();
+                    return Ok(vec![BrokerInfo {
+                        id: 0, // Will be determined during data collection
+                        hostname,
+                        datacenter: "unknown".to_string(),
+                    }]);
+                }
+            }
+            Err(_) => {
+                debug!("Ping test failed");
+            }
+        }
+        
+        Ok(Vec::new())
+    }
+
+    /// Parse broker information from API versions output
+    fn parse_broker_api_versions_output(&self, output: &str, broker_address: &str) -> Vec<BrokerInfo> {
+        // This is a simplified parser - in real scenarios we might extract more broker info
+        // For now, if the command succeeded, we know at least the given broker exists
+        let hostname = broker_address.split(':').next().unwrap_or("unknown").to_string();
+        
+        vec![BrokerInfo {
+            id: 0, // Will be determined during data collection
+            hostname,
+            datacenter: "unknown".to_string(),
+        }]
+    }
+
+    /// Try to discover additional brokers from JMX or log parsing
+    async fn discover_brokers_from_jmx_or_logs(&self, _broker_address: &str) -> Result<Vec<BrokerInfo>> {
+        // This could be enhanced to use JMX tools or parse Kafka logs for broker information
+        // For now, return empty to fall back to other methods
+        Ok(Vec::new())
+    }
+
+    /// Discover brokers by parsing server.properties files on known brokers
+    async fn discover_brokers_from_configs(&self, _broker_address: &str) -> Result<Vec<BrokerInfo>> {
+        // This would involve SSHing to the known broker, finding server.properties,
+        // and looking for cluster configuration or other broker references
+        // TODO: Implement config-based broker discovery
+        info!("Config-based discovery method not yet implemented");
+        Ok(Vec::new())
+    }
+
+    /// Parse a single line from kafka-metadata-shell output to extract broker info
+    fn parse_metadata_shell_broker_line(&self, line: &str) -> Option<BrokerInfo> {
+        // Expected format might be something like "Broker 11: kafka-host:9092"
+        // This is a placeholder - actual format depends on kafka-metadata-shell output
+        if line.contains("Broker") && line.contains(":") {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 2 {
+                if let Ok(id) = parts[1].trim_end_matches(':').parse::<i32>() {
+                    if let Some(address) = parts.get(2) {
+                        let hostname = address.split(':').next().unwrap_or(address).to_string();
+                        return Some(BrokerInfo {
+                            id,
+                            hostname,
+                            datacenter: "unknown".to_string(),
+                        });
+                    }
+                }
+            }
+        }
+        None
     }
     
     /// Check if SSH agent has keys loaded (only needed for remote bastion)

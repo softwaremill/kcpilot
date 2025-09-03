@@ -21,7 +21,7 @@ impl BastionCollector {
             output_dir,
         }
     }
-    
+
     /// Execute command on bastion (either locally or via SSH)
     fn run_on_bastion(&self, command: &str) -> Result<String> {
         let output = match &self.bastion_alias {
@@ -401,6 +401,107 @@ impl BrokerCollector {
         None
     }
     
+    /// Discover Kafka installation path using systemctl and ps aux methods
+    async fn discover_kafka_installation_path(&self) -> Option<String> {
+        println!("  🔍 Discovering Kafka installation path...");
+        
+        // Method 1: Try systemctl approach first
+        if let Ok(ps_output) = self.run_on_broker("ps aux | grep -E 'kafka\\.Kafka[^a-zA-Z]' | grep -v grep") {
+            if let Some(pid_str) = self.extract_pid_from_ps_output(&ps_output) {
+                if let Ok(pid) = pid_str.parse::<u32>() {
+                    if let Ok(systemctl_output) = self.run_on_broker(&format!("systemctl status {} 2>/dev/null", pid)) {
+                        if let Some(service_name) = self.extract_service_name_from_systemctl(&systemctl_output) {
+                            if let Ok(service_content) = self.run_on_broker(&format!("systemctl cat {} 2>/dev/null", service_name)) {
+                                // Look for ExecStart line to extract kafka installation path
+                                for line in service_content.lines() {
+                                    if line.trim().starts_with("ExecStart=") {
+                                        let exec_start = line.trim().strip_prefix("ExecStart=").unwrap_or("");
+                                        // Look for kafka-server-start.sh pattern
+                                        if exec_start.contains("kafka-server-start.sh") {
+                                            if let Some(start_pos) = exec_start.find("kafka-server-start.sh") {
+                                                let before_script = &exec_start[..start_pos];
+                                                if let Some(bin_pos) = before_script.rfind("/bin/") {
+                                                    let kafka_path = &before_script[..bin_pos + 4];
+                                                    println!("    ✅ Found Kafka path via systemctl: {}", kafka_path);
+                                                    return Some(kafka_path.to_string());
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Method 2: Parse ps aux output directly for installation path
+        if let Ok(ps_output) = self.run_on_broker("ps aux | grep kafka.Kafka | grep -v grep") {
+            let line = ps_output.lines().next().unwrap_or("");
+            
+            // Look for classpath argument that contains kafka installation libs
+            if let Some(cp_start) = line.find("-cp ") {
+                let after_cp = &line[cp_start + 4..];
+                if let Some(cp_end) = after_cp.find(" kafka.Kafka") {
+                    let classpath = &after_cp[..cp_end];
+                    
+                    // Extract path from first jar in classpath (should be kafka libs)
+                    if let Some(first_jar) = classpath.split(':').next() {
+                        if first_jar.contains("/libs/") && first_jar.contains("kafka") {
+                            if let Some(libs_pos) = first_jar.rfind("/libs/") {
+                                let kafka_base = &first_jar[..libs_pos];
+                                let kafka_path = format!("{}/bin", kafka_base);
+                                println!("    ✅ Found Kafka path via ps aux classpath: {}", kafka_path);
+                                return Some(kafka_path);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Alternative: Look for kafka-server-start.sh or similar script in the command line
+            if line.contains("kafka-server-start") {
+                let parts: Vec<&str> = line.split_whitespace().collect();
+                for part in parts {
+                    if part.contains("kafka-server-start") && part.contains("/bin/") {
+                        if let Some(bin_pos) = part.rfind("/bin/") {
+                            let kafka_path = &part[..bin_pos + 4];
+                            println!("    ✅ Found Kafka path via ps aux script: {}", kafka_path);
+                            return Some(kafka_path.to_string());
+                        }
+                    }
+                }
+            }
+            
+            // Look for kafka logs directory parameter which can help identify installation
+            if line.contains("-Dkafka.logs.dir=") {
+                if let Some(logs_start) = line.find("-Dkafka.logs.dir=") {
+                    let after_logs = &line[logs_start + 17..];
+                    if let Some(logs_end) = after_logs.find(' ') {
+                        let logs_dir = &after_logs[..logs_end];
+                        // Common pattern: /opt/kafka/bin/../logs -> /opt/kafka/bin
+                        if logs_dir.contains("/../logs") {
+                            let kafka_path = logs_dir.replace("/../logs", "");
+                            println!("    ✅ Found Kafka path via logs directory: {}", kafka_path);
+                            return Some(kafka_path);
+                        }
+                        // Alternative: /opt/kafka/logs -> /opt/kafka/bin
+                        if logs_dir.contains("/logs") {
+                            let base_path = logs_dir.trim_end_matches("/logs");
+                            let kafka_path = format!("{}/bin", base_path);
+                            println!("    ✅ Found Kafka path via logs directory (alt): {}", kafka_path);
+                            return Some(kafka_path);
+                        }
+                    }
+                }
+            }
+        }
+        
+        println!("    ⚠️  Could not discover Kafka installation path");
+        None
+    }
+    
     /// Collect all data from this broker
     pub async fn collect_all(&self) -> Result<BrokerData> {
         let broker_dir = self.output_dir.join("brokers").join(format!("broker_{}", self.broker.id));
@@ -425,9 +526,25 @@ impl BrokerCollector {
             serde_json::to_string_pretty(&broker_info_json)?,
         )?;
         
-        // 1. Collect system information
+        // 1. Discover Kafka installation path first (needed for broker discovery later)
+        let kafka_installation_path = self.discover_kafka_installation_path().await;
+        
+        // Store the discovered path for later use
+        if let Some(ref path) = kafka_installation_path {
+            fs::write(
+                broker_dir.join("system").join("kafka_installation_path.txt"),
+                path,
+            )?;
+        }
+
+        // 2. Collect system information
         print!("  📊 System info... ");
         let mut system_info = HashMap::new();
+        
+        // Add kafka installation path to system info if discovered
+        if let Some(ref path) = kafka_installation_path {
+            system_info.insert("kafka_installation_path".to_string(), path.clone());
+        }
         
         let system_commands = vec![
             ("hostname", "hostname -f"),
@@ -445,7 +562,7 @@ impl BrokerCollector {
         }
         println!("✓");
         
-        // 2. Java/JVM information
+        // 3. Java/JVM information
         print!("  ☕ Java/JVM info... ");
         if let Ok(java_version) = self.run_on_broker("java -version 2>&1") {
             fs::write(broker_dir.join("system").join("java_version.txt"), &java_version)?;
@@ -468,7 +585,7 @@ impl BrokerCollector {
         }
         println!("✓");
         
-        // 3. Configuration files - Using enhanced discovery first, fallback to find
+        // 4. Configuration files - Using enhanced discovery first, fallback to find
         print!("  📝 Configuration files (enhanced discovery)... ");
         let mut configs = HashMap::new();
         
@@ -618,7 +735,7 @@ impl BrokerCollector {
             println!("✓ (found {} config files via fallback methods)", configs.len());
         }
         
-        // 4. Log files - Using enhanced discovery (process → systemd → config → logs)
+        // 5. Log files - Using enhanced discovery (process → systemd → config → logs)
         print!("  📜 Log files (enhanced discovery)... ");
         let mut logs = HashMap::new();
         
@@ -730,7 +847,7 @@ impl BrokerCollector {
             }
         }
         
-        // 5. Data directories
+        // 6. Data directories
         print!("  💾 Data directories... ");
         let mut data_dirs = Vec::new();
         
@@ -758,7 +875,7 @@ impl BrokerCollector {
         }
         println!("✓");
         
-        // 6. Network information
+        // 7. Network information
         print!("  🌐 Network info... ");
         if let Ok(network) = self.run_on_broker(
             "netstat -tuln 2>/dev/null | grep -E '9092|9093|9094' || ss -tuln | grep -E '9092|9093|9094'"
