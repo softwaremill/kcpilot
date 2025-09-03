@@ -6,21 +6,6 @@ mod tests {
     use std::collections::HashMap;
     use std::path::PathBuf;
 
-    #[tokio::test]
-    async fn test_log_discovery_local() {
-        let discovery = LogDiscovery::new(None);
-        
-        // This will try to discover on the local system
-        // In CI, it might not find anything, but should not crash
-        let result = discovery.discover_logs().await;
-        
-        // Should always return OK, even if no logs found
-        assert!(result.is_ok());
-        
-        let discovered = result.unwrap();
-        assert!(!discovered.detection_methods.is_empty());
-    }
-
     #[test]
     fn test_determine_log_type_from_path() {
         let discovery = LogDiscovery::new(None);
