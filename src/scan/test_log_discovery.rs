@@ -42,7 +42,7 @@ mod tests {
         
         assert!(matches!(
             discovery.determine_log_type_from_path(&PathBuf::from("/var/log/kafka/unknown.log")),
-            LogType::Custom(_)
+            LogType::Unknown
         ));
     }
 
@@ -86,7 +86,6 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Private method - skip for now
     async fn test_parse_log4j_config() {
         let temp_dir = TempDir::new().unwrap();
         let log4j_path = temp_dir.path().join("log4j.properties");
@@ -146,7 +145,6 @@ log4j.appender.stateAppender.File=${log.dir}/state-change.log
     }
 
     #[tokio::test]
-    #[ignore] // Private method - skip for now
     async fn test_parse_kafka_config() {
         let temp_dir = TempDir::new().unwrap();
         let config_path = temp_dir.path().join("server.properties");

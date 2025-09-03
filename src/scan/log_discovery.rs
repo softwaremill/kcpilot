@@ -494,7 +494,7 @@ impl LogDiscovery {
     }
 
     /// Parse Kafka server.properties configuration
-    async fn parse_kafka_config(&self, config_path: &PathBuf, discovered: &mut DiscoveredLogs) -> Result<()> {
+    pub async fn parse_kafka_config(&self, config_path: &PathBuf, discovered: &mut DiscoveredLogs) -> Result<()> {
         let content = self.execute(&format!("cat '{}' 2>/dev/null", config_path.display()))?;
         if content.is_empty() {
             return Ok(());
@@ -536,7 +536,7 @@ impl LogDiscovery {
     }
 
     /// Parse log4j configuration file
-    async fn parse_log4j_config(&self, log4j_path: &PathBuf, discovered: &mut DiscoveredLogs) -> Result<()> {
+    pub async fn parse_log4j_config(&self, log4j_path: &PathBuf, discovered: &mut DiscoveredLogs) -> Result<()> {
         let content = self.execute(&format!("cat '{}' 2>/dev/null", log4j_path.display()))?;
         if content.is_empty() {
             return Ok(());
@@ -558,7 +558,13 @@ impl LogDiscovery {
                 if key.contains("appender") && key.ends_with(".File") {
                     // Extract log file path, handling variable substitution
                     let log_path = self.resolve_log4j_path(value);
-                    let log_type = self.determine_log_type_from_appender(key);
+                    let mut log_type = self.determine_log_type_from_appender(key);
+                    
+                    // If appender doesn't give specific type, try path-based detection
+                    if matches!(log_type, LogType::Custom(_)) {
+                        log_type = self.determine_log_type_from_path(&log_path);
+                    }
+                    
                     self.add_log_file(log_path, "log4j_config", log_type, discovered).await?;
                 }
             }
