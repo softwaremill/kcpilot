@@ -43,7 +43,20 @@ impl BastionCollector {
             }
         };
         
+        if !output.status.success() {
+            let stderr = String::from_utf8_lossy(&output.stderr);
+            return Err(anyhow::anyhow!("Command failed: {}", stderr));
+        }
+        
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    }
+
+    /// Check if kafkactl is available on the bastion
+    fn check_kafkactl_availability(&self) -> bool {
+        match self.run_on_bastion("which kafkactl") {
+            Ok(output) => !output.trim().is_empty(),
+            Err(_) => false,
+        }
     }
     
     /// Collect all bastion-level data
@@ -52,60 +65,82 @@ impl BastionCollector {
             Some(alias) => format!("from bastion '{}'", alias),
             None => "locally (running on bastion)".to_string(),
         };
-        println!("📊 Collecting kafkactl data {}...", location);
-        
         let mut kafkactl_data = HashMap::new();
         let kafkactl_dir = self.output_dir.join("cluster").join("kafkactl");
         
-        // Get broker list
-        print!("  • Getting broker list... ");
-        let brokers = self.run_on_bastion("kafkactl get brokers")?;
-        fs::write(kafkactl_dir.join("brokers.txt"), &brokers)?;
-        kafkactl_data.insert("brokers".to_string(), brokers);
-        println!("✓");
-        
-        // Get topics
-        print!("  • Getting topics... ");
-        let topics = self.run_on_bastion("kafkactl get topics")?;
-        fs::write(kafkactl_dir.join("topics.txt"), &topics)?;
-        kafkactl_data.insert("topics".to_string(), topics.clone());
-        println!("✓");
-        
-        // Get topic details
-        print!("  • Getting topic details... ");
-        let mut topics_detailed = String::new();
-        for line in topics.lines() {
-            let topic = line.split_whitespace().next().unwrap_or("");
-            if !topic.is_empty() && topic != "TOPIC" {
-                if let Ok(details) = self.run_on_bastion(&format!("kafkactl describe topic {}", topic)) {
-                    topics_detailed.push_str(&details);
-                    topics_detailed.push_str("\n\n");
+        // Check if kafkactl is available
+        if !self.check_kafkactl_availability() {
+            println!("⚠️  kafkactl not available {} - skipping kafkactl data collection", location);
+            println!("   Continuing with other data collection methods...");
+            
+            // Create empty kafkactl directory to maintain expected structure
+            fs::create_dir_all(&kafkactl_dir)?;
+            fs::write(kafkactl_dir.join("unavailable.txt"), 
+                "kafkactl tool was not available on the bastion host during scan")?;
+        } else {
+            println!("📊 Collecting kafkactl data {}...", location);
+            
+            // Get broker list
+            print!("  • Getting broker list... ");
+            if let Ok(brokers) = self.run_on_bastion("kafkactl get brokers") {
+                fs::write(kafkactl_dir.join("brokers.txt"), &brokers)?;
+                kafkactl_data.insert("brokers".to_string(), brokers);
+                println!("✓");
+            } else {
+                println!("⚠");
+            }
+            
+            // Get topics
+            print!("  • Getting topics... ");
+            if let Ok(topics) = self.run_on_bastion("kafkactl get topics") {
+                fs::write(kafkactl_dir.join("topics.txt"), &topics)?;
+                kafkactl_data.insert("topics".to_string(), topics.clone());
+                println!("✓");
+                
+                // Get topic details
+                print!("  • Getting topic details... ");
+                let mut topics_detailed = String::new();
+                for line in topics.lines() {
+                    let topic = line.split_whitespace().next().unwrap_or("");
+                    if !topic.is_empty() && topic != "TOPIC" {
+                        if let Ok(details) = self.run_on_bastion(&format!("kafkactl describe topic {}", topic)) {
+                            topics_detailed.push_str(&details);
+                            topics_detailed.push_str("\n\n");
+                        }
+                    }
+                }
+                fs::write(kafkactl_dir.join("topics_detailed.txt"), &topics_detailed)?;
+                kafkactl_data.insert("topics_detailed".to_string(), topics_detailed);
+                println!("✓");
+            } else {
+                println!("⚠");
+            }
+            
+            // Get consumer groups
+            print!("  • Getting consumer groups... ");
+            if let Ok(consumer_groups) = self.run_on_bastion("kafkactl get consumer-groups") {
+                fs::write(kafkactl_dir.join("consumer_groups.txt"), &consumer_groups)?;
+                kafkactl_data.insert("consumer_groups".to_string(), consumer_groups);
+                println!("✓");
+            } else {
+                println!("⚠");
+            }
+            
+            // Get individual broker configs
+            println!("  • Getting broker configurations:");
+            for broker_id in [11, 12, 13, 14, 15, 16] {
+                print!("    - Broker {}... ", broker_id);
+                if let Ok(config) = self.run_on_bastion(&format!("kafkactl describe broker {}", broker_id)) {
+                    fs::write(
+                        kafkactl_dir.join(format!("broker_{}_config.txt", broker_id)),
+                        &config,
+                    )?;
+                    kafkactl_data.insert(format!("broker_{}_config", broker_id), config);
+                    println!("✓");
+                } else {
+                    println!("⚠");
                 }
             }
-        }
-        fs::write(kafkactl_dir.join("topics_detailed.txt"), &topics_detailed)?;
-        kafkactl_data.insert("topics_detailed".to_string(), topics_detailed);
-        println!("✓");
-        
-        // Get consumer groups
-        print!("  • Getting consumer groups... ");
-        let consumer_groups = self.run_on_bastion("kafkactl get consumer-groups")?;
-        fs::write(kafkactl_dir.join("consumer_groups.txt"), &consumer_groups)?;
-        kafkactl_data.insert("consumer_groups".to_string(), consumer_groups);
-        println!("✓");
-        
-        // Get individual broker configs
-        println!("  • Getting broker configurations:");
-        for broker_id in [11, 12, 13, 14, 15, 16] {
-            print!("    - Broker {}... ", broker_id);
-            if let Ok(config) = self.run_on_bastion(&format!("kafkactl describe broker {}", broker_id)) {
-                fs::write(
-                    kafkactl_dir.join(format!("broker_{}_config.txt", broker_id)),
-                    &config,
-                )?;
-                kafkactl_data.insert(format!("broker_{}_config", broker_id), config);
-            }
-            println!("✓");
         }
         
         println!("✅ Kafkactl data collected\n");
