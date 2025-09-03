@@ -82,8 +82,8 @@ impl BastionCollector {
             
             // Get broker list
             print!("  • Getting broker list... ");
-            if let Ok(brokers) = self.run_on_bastion("kafkactl get brokers") {
-                fs::write(kafkactl_dir.join("brokers.txt"), &brokers)?;
+            if let Ok(brokers) = self.run_on_bastion("kafkactl get brokers -o yaml") {
+                fs::write(kafkactl_dir.join("brokers.yaml"), &brokers)?;
                 kafkactl_data.insert("brokers".to_string(), brokers);
                 println!("✓");
             } else {
@@ -92,24 +92,30 @@ impl BastionCollector {
             
             // Get topics
             print!("  • Getting topics... ");
-            if let Ok(topics) = self.run_on_bastion("kafkactl get topics") {
-                fs::write(kafkactl_dir.join("topics.txt"), &topics)?;
+            if let Ok(topics) = self.run_on_bastion("kafkactl get topics -o yaml") {
+                fs::write(kafkactl_dir.join("topics.yaml"), &topics)?;
                 kafkactl_data.insert("topics".to_string(), topics.clone());
                 println!("✓");
                 
-                // Get topic details
+                // Get topic details - extract topic names from YAML and get detailed info
                 print!("  • Getting topic details... ");
                 let mut topics_detailed = String::new();
+                // Parse topic names from YAML output (simplified - assumes standard kafkactl YAML format)
                 for line in topics.lines() {
-                    let topic = line.split_whitespace().next().unwrap_or("");
-                    if !topic.is_empty() && topic != "TOPIC" {
-                        if let Ok(details) = self.run_on_bastion(&format!("kafkactl describe topic {}", topic)) {
-                            topics_detailed.push_str(&details);
-                            topics_detailed.push_str("\n\n");
+                    if line.trim().starts_with("- name:") {
+                        if let Some(topic_name) = line.split(':').nth(1) {
+                            let topic = topic_name.trim().trim_matches('"');
+                            if !topic.is_empty() {
+                                if let Ok(details) = self.run_on_bastion(&format!("kafkactl describe topic {} -o yaml", topic)) {
+                                    topics_detailed.push_str(&format!("---\n# Topic: {}\n", topic));
+                                    topics_detailed.push_str(&details);
+                                    topics_detailed.push_str("\n\n");
+                                }
+                            }
                         }
                     }
                 }
-                fs::write(kafkactl_dir.join("topics_detailed.txt"), &topics_detailed)?;
+                fs::write(kafkactl_dir.join("topics_detailed.yaml"), &topics_detailed)?;
                 kafkactl_data.insert("topics_detailed".to_string(), topics_detailed);
                 println!("✓");
             } else {
@@ -118,8 +124,8 @@ impl BastionCollector {
             
             // Get consumer groups
             print!("  • Getting consumer groups... ");
-            if let Ok(consumer_groups) = self.run_on_bastion("kafkactl get consumer-groups") {
-                fs::write(kafkactl_dir.join("consumer_groups.txt"), &consumer_groups)?;
+            if let Ok(consumer_groups) = self.run_on_bastion("kafkactl get consumer-groups -o yaml") {
+                fs::write(kafkactl_dir.join("consumer_groups.yaml"), &consumer_groups)?;
                 kafkactl_data.insert("consumer_groups".to_string(), consumer_groups);
                 println!("✓");
             } else {
@@ -130,9 +136,9 @@ impl BastionCollector {
             println!("  • Getting broker configurations:");
             for broker_id in [11, 12, 13, 14, 15, 16] {
                 print!("    - Broker {}... ", broker_id);
-                if let Ok(config) = self.run_on_bastion(&format!("kafkactl describe broker {}", broker_id)) {
+                if let Ok(config) = self.run_on_bastion(&format!("kafkactl describe broker {} -o yaml", broker_id)) {
                     fs::write(
-                        kafkactl_dir.join(format!("broker_{}_config.txt", broker_id)),
+                        kafkactl_dir.join(format!("broker_{}_config.yaml", broker_id)),
                         &config,
                     )?;
                     kafkactl_data.insert(format!("broker_{}_config", broker_id), config);

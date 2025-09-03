@@ -593,15 +593,17 @@ impl EnhancedLogDiscovery {
             .join("\n");
 
         format!(
-            r#"Please analyze this Kafka log4j configuration and determine where logs are written.
+            r#"Analyze this Kafka log4j configuration and determine where logs are written.
 
-Environment Variables Available:
+Environment Variables:
 {}
 
 Log4j Configuration:
 {}
 
-Please provide a JSON response with the following structure:
+IMPORTANT: Respond with ONLY valid JSON, no explanations or additional text.
+
+JSON Structure Required:
 {{
   "log_files": [
     {{
@@ -615,58 +617,125 @@ Please provide a JSON response with the following structure:
   "analysis": "Brief explanation of the log configuration"
 }}
 
-Important:
-1. Resolve all variable substitutions like ${{kafka.logs.dir}}, ${{LOG_DIR}}, etc. using the environment variables
-2. Identify if logs are written to stdout/console (which would appear in journald)
-3. Classify log types based on appender names and file names
-4. Include the full resolved paths to log files"#,
+Requirements:
+1. Resolve variable substitutions like ${{kafka.logs.dir}}, ${{LOG_DIR}} using environment variables
+2. Identify if logs go to stdout/console (appears in journald)
+3. Classify log types by appender names/file names
+4. Use full resolved file paths
+5. Return ONLY the JSON object, no other text"#,
             env_vars_str, log4j_content
         )
     }
 
     /// Parse LLM response for log4j analysis
     fn parse_llm_log4j_response(&self, llm_response: &str) -> Result<LogOutputInfo> {
-        // Try to extract JSON from the LLM response
-        let json_start = llm_response.find('{').unwrap_or(0);
-        let json_end = llm_response.rfind('}').map(|pos| pos + 1).unwrap_or(llm_response.len());
-        let json_str = &llm_response[json_start..json_end];
+        // Try multiple strategies to extract JSON from the LLM response
+        let json_candidates = vec![
+            // Strategy 1: Look for JSON code block
+            self.extract_json_from_code_block(llm_response),
+            // Strategy 2: Find the largest JSON object in the response
+            self.extract_largest_json_object(llm_response),
+            // Strategy 3: Original simple extraction
+            self.extract_simple_json(llm_response),
+        ];
         
-        match serde_json::from_str::<serde_json::Value>(json_str) {
-            Ok(json_value) => {
-                let mut log_files = Vec::new();
-                
-                if let Some(files_array) = json_value.get("log_files").and_then(|v| v.as_array()) {
-                    for file_obj in files_array {
-                        if let (Some(path), Some(log_type), Some(appender)) = (
-                            file_obj.get("path").and_then(|v| v.as_str()),
-                            file_obj.get("log_type").and_then(|v| v.as_str()),
-                            file_obj.get("appender_name").and_then(|v| v.as_str()),
-                        ) {
-                            log_files.push(LogFileLocation {
-                                path: PathBuf::from(path),
-                                log_type: log_type.to_string(),
-                                appender_name: appender.to_string(),
-                            });
-                        }
-                    }
-                }
-                
-                let uses_stdout = json_value.get("uses_stdout").and_then(|v| v.as_bool()).unwrap_or(false);
-                let uses_journald = json_value.get("uses_journald").and_then(|v| v.as_bool()).unwrap_or(false);
-                let analysis = json_value.get("analysis").and_then(|v| v.as_str()).unwrap_or("LLM analysis").to_string();
-                
-                Ok(LogOutputInfo {
-                    log_files,
-                    uses_stdout,
-                    uses_journald,
-                    log4j_analysis: analysis,
-                })
-            }
-            Err(e) => {
-                // Return error so the caller can handle fallback to basic parsing
-                Err(anyhow::anyhow!("JSON parsing failed: {}. Response was: {}", e, llm_response))
+        for json_str in json_candidates.into_iter().flatten() {
+            if let Ok(json_value) = serde_json::from_str::<serde_json::Value>(&json_str) {
+                return self.parse_json_to_log_output_info(json_value);
             }
         }
+        
+        // If none worked, return error with the full response for debugging
+        Err(anyhow::anyhow!("Could not extract valid JSON from LLM response. Response was: {}", llm_response))
+    }
+    
+    /// Extract JSON from code block (```json ... ```)
+    fn extract_json_from_code_block(&self, response: &str) -> Option<String> {
+        if let Some(start) = response.find("```json") {
+            let start = start + 7; // Skip "```json"
+            if let Some(end) = response[start..].find("```") {
+                return Some(response[start..start + end].trim().to_string());
+            }
+        }
+        None
+    }
+    
+    /// Extract the largest JSON object from the response
+    fn extract_largest_json_object(&self, response: &str) -> Option<String> {
+        let mut best_json = None;
+        let mut best_len = 0;
+        
+        // Find all potential JSON objects
+        for (i, _) in response.match_indices('{') {
+            let mut brace_count = 0;
+            let mut end_pos = i;
+            
+            for (j, c) in response[i..].char_indices() {
+                match c {
+                    '{' => brace_count += 1,
+                    '}' => {
+                        brace_count -= 1;
+                        if brace_count == 0 {
+                            end_pos = i + j + 1;
+                            break;
+                        }
+                    }
+                    _ => {}
+                }
+            }
+            
+            if brace_count == 0 {
+                let json_candidate = &response[i..end_pos];
+                if json_candidate.len() > best_len {
+                    // Quick validation that it looks like proper JSON
+                    if json_candidate.contains("log_files") && json_candidate.contains("uses_stdout") {
+                        best_json = Some(json_candidate.to_string());
+                        best_len = json_candidate.len();
+                    }
+                }
+            }
+        }
+        
+        best_json
+    }
+    
+    /// Simple extraction (original method)
+    fn extract_simple_json(&self, response: &str) -> Option<String> {
+        let json_start = response.find('{')?;
+        let json_end = response.rfind('}').map(|pos| pos + 1)?;
+        Some(response[json_start..json_end].to_string())
+    }
+    
+    /// Parse validated JSON into LogOutputInfo
+    fn parse_json_to_log_output_info(&self, json_value: serde_json::Value) -> Result<LogOutputInfo> {
+        let mut log_files = Vec::new();
+        
+        if let Some(files_array) = json_value.get("log_files").and_then(|v| v.as_array()) {
+            for file_obj in files_array {
+                if let (Some(path), Some(log_type), Some(appender)) = (
+                    file_obj.get("path").and_then(|v| v.as_str()),
+                    file_obj.get("log_type").and_then(|v| v.as_str()),
+                    file_obj.get("appender_name").and_then(|v| v.as_str()),
+                ) {
+                    log_files.push(LogFileLocation {
+                        path: PathBuf::from(path),
+                        log_type: log_type.to_string(),
+                        appender_name: appender.to_string(),
+                    });
+                }
+            }
+        }
+        
+        let uses_stdout = json_value.get("uses_stdout").and_then(|v| v.as_bool()).unwrap_or(false);
+        let uses_journald = json_value.get("uses_journald").and_then(|v| v.as_bool()).unwrap_or(false);
+        let analysis = json_value.get("analysis").and_then(|v| v.as_str()).unwrap_or("LLM analysis").to_string();
+        
+        Ok(LogOutputInfo {
+            log_files,
+            uses_stdout,
+            uses_journald,
+            log4j_analysis: analysis,
+        })
     }
 
     /// Basic log4j parsing fallback when LLM is not available
