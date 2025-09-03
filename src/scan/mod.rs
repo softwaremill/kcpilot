@@ -88,14 +88,7 @@ impl Scanner {
         let output_dir = PathBuf::from(format!("kafka-scan-{}", timestamp));
         
         // Default broker configuration - can be made configurable
-        let brokers = vec![
-            BrokerInfo { id: 11, hostname: "kafka-poligon-dc1-1.c.bartek-rekke-sandbox.internal".to_string(), datacenter: "dc1".to_string() },
-            BrokerInfo { id: 12, hostname: "kafka-poligon-dc1-2.c.bartek-rekke-sandbox.internal".to_string(), datacenter: "dc1".to_string() },
-            BrokerInfo { id: 13, hostname: "kafka-poligon-dc2-1.c.bartek-rekke-sandbox.internal".to_string(), datacenter: "dc2".to_string() },
-            BrokerInfo { id: 14, hostname: "kafka-poligon-dc2-2.c.bartek-rekke-sandbox.internal".to_string(), datacenter: "dc2".to_string() },
-            BrokerInfo { id: 15, hostname: "kafka-poligon-dc3-1.c.bartek-rekke-sandbox.internal".to_string(), datacenter: "dc3".to_string() },
-            BrokerInfo { id: 16, hostname: "kafka-poligon-dc3-2.c.bartek-rekke-sandbox.internal".to_string(), datacenter: "dc3".to_string() },
-        ];
+        let brokers = vec![];
         
         Ok(Self {
             config: ScanConfig {
@@ -114,6 +107,140 @@ impl Scanner {
     pub fn with_brokers(mut self, brokers: Vec<BrokerInfo>) -> Self {
         self.config.brokers = brokers;
         self
+    }
+
+    /// Discover brokers from kafkactl when no broker parameter is provided
+    pub async fn discover_brokers_from_kafkactl(mut self) -> Result<Self> {
+        info!("Attempting to discover brokers from kafkactl");
+        
+        // First check if kafkactl is available
+        let kafkactl_available = self.check_kafkactl_availability();
+        
+        if !kafkactl_available {
+            return Err(anyhow::anyhow!(
+                "❌ Neither --broker parameter nor kafkactl tool are available.\n\n\
+                 To scan the Kafka cluster, you must provide one of the following:\n\
+                 • Use --broker hostname:port to specify a single broker for cluster discovery\n\
+                 • Ensure kafkactl is installed and configured on the bastion host\n\n\
+                 Examples:\n\
+                 • kafkapilot scan --bastion my-bastion --broker kafka1.example.com:9092\n\
+                 • kafkapilot scan --bastion my-bastion  # (requires kafkactl)"
+            ));
+        }
+        
+        info!("✅ kafkactl is available, extracting broker list");
+        
+        // Get brokers from kafkactl
+        match self.run_command_on_bastion("kafkactl get brokers -o yaml") {
+            Ok(brokers_yaml) => {
+                let discovered_brokers = self.parse_kafkactl_brokers(&brokers_yaml)?;
+                
+                if discovered_brokers.is_empty() {
+                    return Err(anyhow::anyhow!("No brokers found in kafkactl output"));
+                }
+                
+                info!("✅ Successfully discovered {} brokers from kafkactl:", discovered_brokers.len());
+                for broker in &discovered_brokers {
+                    info!("   • Broker {} - {} ({})", broker.id, broker.hostname, broker.datacenter);
+                }
+                
+                self.config.brokers = discovered_brokers;
+                Ok(self)
+            }
+            Err(e) => {
+                Err(anyhow::anyhow!("Failed to get brokers from kafkactl: {}", e))
+            }
+        }
+    }
+    
+    /// Check if kafkactl is available on the bastion
+    fn check_kafkactl_availability(&self) -> bool {
+        match self.run_command_on_bastion("which kafkactl") {
+            Ok(output) => !output.trim().is_empty(),
+            Err(_) => false,
+        }
+    }
+    
+    /// Parse kafkactl broker output to extract broker information
+    fn parse_kafkactl_brokers(&self, yaml_output: &str) -> Result<Vec<BrokerInfo>> {
+        let mut brokers = Vec::new();
+        let mut current_broker: Option<BrokerInfo> = None;
+        let mut in_broker_section = false;
+        
+        // Parse brokers from kafkactl YAML output
+        
+        for line in yaml_output.lines() {
+            let line = line.trim();
+            
+            // Start of a new broker entry - must be "- id:" to distinguish from config entries
+            if line.starts_with("- id:") {
+                // Save previous broker if exists
+                if let Some(broker) = current_broker.take() {
+                    if broker.id != -1 && !broker.hostname.is_empty() {
+                        brokers.push(broker);
+                    }
+                }
+                
+                // Parse ID directly from this line
+                if let Some(id_str) = line.strip_prefix("- id:") {
+                    if let Ok(id) = id_str.trim().parse::<i32>() {
+                        current_broker = Some(BrokerInfo {
+                            id,
+                            hostname: String::new(),
+                            datacenter: "unknown".to_string(),
+                        });
+                        in_broker_section = true;
+                    }
+                }
+                continue;
+            }
+            
+            if in_broker_section && current_broker.is_some() {
+                // Parse broker fields - ID is already handled above
+                if line.starts_with("address:") {
+                    if let Some(addr_str) = line.strip_prefix("address:") {
+                        let address = addr_str.trim().trim_matches('"');
+                        // Extract hostname from hostname:port format
+                        let hostname = if let Some(colon_pos) = address.find(':') {
+                            &address[..colon_pos]
+                        } else {
+                            address
+                        };
+                        current_broker.as_mut().unwrap().hostname = hostname.to_string();
+                        
+                        // Try to infer datacenter from hostname pattern
+                        let datacenter = if hostname.contains("-dc1-") {
+                            "dc1".to_string()
+                        } else if hostname.contains("-dc2-") {
+                            "dc2".to_string()
+                        } else if hostname.contains("-dc3-") {
+                            "dc3".to_string()
+                        } else {
+                            "unknown".to_string()
+                        };
+                        current_broker.as_mut().unwrap().datacenter = datacenter;
+                    }
+                } else if line.starts_with("port:") || line.starts_with("rack:") {
+                    // Additional fields we might want to capture later
+                    continue;
+                }
+            }
+        }
+        
+        // Add the last broker
+        if let Some(broker) = current_broker {
+            if broker.id != -1 && !broker.hostname.is_empty() {
+                brokers.push(broker);
+            }
+        }
+        
+        // Filter out invalid brokers
+        let valid_brokers: Vec<BrokerInfo> = brokers
+            .into_iter()
+            .filter(|b| b.id != -1 && !b.hostname.is_empty())
+            .collect();
+        
+        Ok(valid_brokers)
     }
 
     /// Discover brokers from a single known broker using Kafka admin API

@@ -40,10 +40,18 @@ async fn main() -> Result<()> {
                 scanner = scanner.with_output_dir(output_path);
             }
             
-            // If a single broker is provided, discover the full cluster from it
-            if let Some(broker_address) = broker {
-                info!("Using broker discovery from: {}", broker_address);
-                scanner = scanner.discover_brokers_from_single(&broker_address).await?;
+            // Handle broker discovery based on input parameters
+            match broker {
+                Some(broker_address) => {
+                    // Single broker provided - discover cluster from it
+                    info!("Using broker discovery from: {}", broker_address);
+                    scanner = scanner.discover_brokers_from_single(&broker_address).await?;
+                }
+                None => {
+                    // No broker provided - try to discover from kafkactl
+                    info!("No broker provided, attempting to discover brokers from kafkactl");
+                    scanner = scanner.discover_brokers_from_kafkactl().await?;
+                }
             }
             
             // Run the scan
