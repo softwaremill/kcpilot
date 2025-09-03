@@ -22,6 +22,7 @@ indicatif = "0.17"
 
 # Kafka
 rdkafka = { version = "0.36", features = ["cmake-build", "ssl", "sasl"] }
+sasl2-sys = { version = "*", features = ["vendored"] }
 
 # Async runtime
 tokio = { version = "1.35", features = ["full"] }
