@@ -4,10 +4,17 @@ on:
   release:
     types: [created]
   workflow_dispatch: # This allows manual triggering
+  workflow_run:
+    workflows: ["Rust"]
+    types:
+      - completed
+    branches: [main]
 
 jobs:
   publish:
     runs-on: ubuntu-latest
+    # Only run if triggered by workflow_run and the previous workflow succeeded
+    if: ${{ github.event.workflow_run.conclusion == 'success' || github.event_name != 'workflow_run' }}
 
     steps:
       - name: Check out the repository
