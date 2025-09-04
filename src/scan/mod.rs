@@ -7,6 +7,8 @@ use std::path::PathBuf;
 use std::process::Command;
 use tracing::{debug, error, info};
 
+use collector::DiscoveryMethod;
+
 pub mod collector;
 pub mod log_discovery;
 pub mod enhanced_log_discovery;
@@ -79,6 +81,7 @@ pub struct CollectionStats {
 
 pub struct Scanner {
     pub config: ScanConfig,
+    discovery_method: Option<DiscoveryMethod>,
 }
 
 impl Scanner {
@@ -96,6 +99,7 @@ impl Scanner {
                 output_dir,
                 brokers,
             },
+            discovery_method: None,
         })
     }
     
@@ -145,6 +149,9 @@ impl Scanner {
                 }
                 
                 self.config.brokers = discovered_brokers;
+                
+                // Set discovery method for topic collection
+                self.discovery_method = Some(DiscoveryMethod::Kafkactl);
                 Ok(self)
             }
             Err(e) => {
@@ -305,6 +312,12 @@ impl Scanner {
             if !brokers.is_empty() {
                 info!("Successfully discovered {} brokers using installation path method", brokers.len());
                 self.config.brokers = brokers;
+                
+                // Set discovery method for topic collection (using default kafka path for now)
+                self.discovery_method = Some(DiscoveryMethod::KafkaTools {
+                    kafka_installation_path: "/opt/kafka/bin".to_string(),
+                    discovery_broker: broker_address.to_string(),
+                });
                 return Ok(self);
             }
         }
@@ -379,6 +392,12 @@ impl Scanner {
         
         info!("Executing broker discovery command via bastion");
         let output = self.run_command_on_bastion(&command)?;
+        
+        // Save the raw broker discovery output to tools directory
+        let tools_dir = self.config.output_dir.join("cluster").join("tools");
+        std::fs::create_dir_all(&tools_dir)?;
+        std::fs::write(tools_dir.join("broker_discovery_kafka_tools.txt"), &output)?;
+        info!("💾 Saved broker discovery output to cluster/tools/broker_discovery_kafka_tools.txt");
         
         // Step 3: Parse the output to extract broker hostnames
         let mut discovered_brokers = Vec::new();
@@ -742,6 +761,7 @@ impl Scanner {
         fs::create_dir_all(base)?;
         fs::create_dir_all(base.join("brokers"))?;
         fs::create_dir_all(base.join("cluster").join("kafkactl"))?;
+        fs::create_dir_all(base.join("cluster").join("tools"))?;
         fs::create_dir_all(base.join("metrics").join("kafka_exporter"))?;
         fs::create_dir_all(base.join("system").join("bastion"))?;
         
@@ -805,10 +825,15 @@ impl Scanner {
         println!("═══════════════════════════════════════════════════════════════");
         println!();
         
-        let bastion_collector = BastionCollector::new(
+        let mut bastion_collector = BastionCollector::new(
             self.config.bastion_alias.clone(),
             self.config.output_dir.clone(),
         );
+        
+        // Set discovery method based on how brokers were discovered
+        if let Some(discovery_method) = &self.discovery_method {
+            bastion_collector = bastion_collector.with_discovery_method(discovery_method.clone());
+        }
         
         let cluster_data = bastion_collector.collect_all().await?;
         
