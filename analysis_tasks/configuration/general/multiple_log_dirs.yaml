@@ -1,0 +1,84 @@
+id: multiple_log_dirs
+name: Multiple Log Directories Configuration Check
+description: Detects brokers with multiple log.dirs configured which can complicate rebalancing operations
+category: configuration
+
+prompt: |
+  Analyze Kafka broker log.dirs configuration to detect complex JBOD setups:
+  
+  Configuration data: {config}
+  System data: {system}
+  
+  IMPORTANT: Extract the EXACT log.dirs value from each broker's server.properties file.
+  
+  Step 1: Extract Log Directories Configuration
+  1. Find log.dirs parameter in server.properties files for each broker
+  2. Parse the value and split by comma to count directories
+  3. Example: "log.dirs=/data/kafka1,/data/kafka2,/data/kafka3" has 3 directories
+  4. Example: "log.dirs=/data/kafka/generic" has 1 directory
+  
+  Step 2: Configuration Analysis
+  Check the number of log directories per broker:
+  - If log.dirs contains > 1 directory: WARNING (complex JBOD configuration with rebalancing complications)
+  - If log.dirs contains = 1 directory: INFO (simple configuration, optimal for management)
+  
+  Step 3: Provide Specific Results
+  IMPORTANT: Analyze each broker individually and report per-broker findings.
+  
+  If ALL brokers have single log directory configurations, return:
+  {
+    "findings": [
+      {
+        "type": "multiple_log_dirs_check",
+        "description": "All X brokers are configured with single log directory. Simple configuration avoids JBOD complexity and rebalancing complications.",
+        "severity": "info",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "log_dirs_count": 1, "log_dirs": ["/data/kafka/generic"], "has_multiple_dirs": false},
+          {"broker_id": "broker_1", "log_dirs_count": 1, "log_dirs": ["/data/kafka"], "has_multiple_dirs": false}
+        ],
+        "recommendation": "Configuration is optimal for operational simplicity"
+      }
+    ]
+  }
+  
+  If ANY brokers have multiple log directories configured, return:
+  {
+    "findings": [
+      {
+        "type": "multiple_log_dirs_check",
+        "description": "WARNING: X out of Y brokers have multiple log directories configured (JBOD setup). Brokers with complex config: broker_1 (3 dirs), broker_3 (2 dirs). This creates a complicated and potentially dangerous configuration that complicates partition rebalancing operations.",
+        "severity": "warning",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "log_dirs_count": 1, "log_dirs": ["/data/kafka"], "has_multiple_dirs": false},
+          {"broker_id": "broker_1", "log_dirs_count": 3, "log_dirs": ["/data/kafka1", "/data/kafka2", "/data/kafka3"], "has_multiple_dirs": true},
+          {"broker_id": "broker_3", "log_dirs_count": 2, "log_dirs": ["/var/kafka", "/opt/kafka"], "has_multiple_dirs": true}
+        ],
+        "recommendation": "Consider simplifying configuration to single log directory per broker to avoid JBOD complexity and rebalancing issues"
+      }
+    ]
+  }
+  
+  Configuration Impact Explanation:
+  - Multiple log.dirs create JBOD (Just a Bunch of Disks) configuration
+  - JBOD complicates partition rebalancing and reassignment operations
+  - Kafka's partition placement becomes more complex across multiple directories
+  - Disk failure in JBOD setup can affect specific partitions unpredictably
+  - Single log directory simplifies operations, monitoring, and troubleshooting
+  - Management overhead increases significantly with multiple directories
+  
+  IMPORTANT: Always include the exact log.dirs values and count for each broker in the analysis.
+
+include_data:
+  - config
+  - system
+
+severity_keywords:
+  "multiple log directories": "warning"
+  "complicated": "warning"
+  "potentially dangerous": "warning"
+  "JBOD": "warning"
+  "single log directory": "info"
+  "simple configuration": "info"
+
+default_severity: warning
+enabled: true
