@@ -1,0 +1,94 @@
+id: in_transit_encryption
+name: In-Transit Encryption Configuration Check
+description: Verifies that any form of in-transit encryption is configured for Kafka brokers to ensure secure communication
+category: configuration
+
+prompt: |
+  Analyze Kafka broker encryption configuration to detect secure in-transit communication:
+  
+  Configuration data: {config}
+  
+  IMPORTANT: Extract encryption-related configuration from server.properties files for each broker.
+  
+  Step 1: Extract Encryption Configuration
+  1. Find listener.security.protocol.map parameter in server.properties files
+  2. Look for any SSL/TLS protocols in the security protocol map
+  3. Find ssl.protocol parameter if present
+  4. Analyze if any form of encryption is enabled
+  
+  Step 2: Security Analysis
+  Check for encryption configuration:
+  - SECURE: listener.security.protocol.map contains SSL, SASL_SSL, or ssl.protocol is set to TLS/TLSv1.x
+  - INSECURE: All listeners use PLAINTEXT protocol and no SSL configuration found
+  
+  Examples of configurations:
+  
+  SECURE Configuration:
+  - listener.security.protocol.map=CLIENTS:SSL,CLUSTER:SSL
+  - listener.security.protocol.map=CLIENTS:SASL_SSL,CLUSTER:PLAINTEXT  
+  - ssl.protocol=TLS or ssl.protocol=TLSv1.3
+  
+  INSECURE Configuration:
+  - listener.security.protocol.map=CLIENTS:PLAINTEXT,CLUSTER:PLAINTEXT
+  - No ssl.protocol configuration
+  
+  Step 3: Provide Specific Results
+  IMPORTANT: Analyze each broker individually and report per-broker findings.
+  
+  If ALL brokers have secure encryption configured, return:
+  {
+    "findings": [
+      {
+        "type": "in_transit_encryption_check",
+        "description": "All X brokers have in-transit encryption configured. Found SSL/TLS protocols in listener security configuration. Communication is secured against eavesdropping and man-in-the-middle attacks.",
+        "severity": "info",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "has_encryption": true, "security_protocols": ["SSL"], "ssl_protocol": "TLSv1.3"},
+          {"broker_id": "broker_1", "has_encryption": true, "security_protocols": ["SASL_SSL"], "ssl_protocol": "TLS"}
+        ],
+        "recommendation": "Encryption configuration is properly implemented for security"
+      }
+    ]
+  }
+  
+  If ANY brokers lack encryption configuration, return:
+  {
+    "findings": [
+      {
+        "type": "in_transit_encryption_check",
+        "description": "CRITICAL: X out of Y brokers have dangerous configuration without in-transit encryption. Found PLAINTEXT-only communication. All Kafka traffic is transmitted unencrypted, vulnerable to eavesdropping, data interception, and man-in-the-middle attacks.",
+        "severity": "critical",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "has_encryption": false, "security_protocols": ["PLAINTEXT"], "ssl_protocol": null},
+          {"broker_id": "broker_1", "has_encryption": false, "security_protocols": ["PLAINTEXT"], "ssl_protocol": null}
+        ],
+        "recommendation": "Configure SSL/TLS encryption by setting listener.security.protocol.map to use SSL or SASL_SSL protocols"
+      }
+    ]
+  }
+  
+  Security Impact Analysis:
+  - PLAINTEXT communication exposes all data in transit
+  - Credentials, message content, and metadata are vulnerable
+  - Network-level attacks can intercept sensitive information  
+  - Compliance requirements often mandate encryption in transit
+  - SSL/TLS provides authentication and data integrity
+  
+  IMPORTANT DISCLAIMER: This analysis detects basic encryption configuration only. It cannot verify end-to-end encryption, certificate validity, cipher suites, or advanced security configurations. A comprehensive security audit requires additional verification of SSL certificates, key management, and encryption strength.
+  
+  IMPORTANT: Always include the specific security protocols and SSL configuration details for each broker.
+
+include_data:
+  - config
+
+severity_keywords:
+  "dangerous configuration": "critical"
+  "PLAINTEXT-only": "critical"
+  "unencrypted": "critical"
+  "vulnerable": "critical"
+  "SSL.*configured": "info"
+  "TLS.*protocols": "info"
+  "secured": "info"
+
+default_severity: critical
+enabled: true
