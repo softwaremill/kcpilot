@@ -81,28 +81,7 @@ impl TaskLoader {
         // Load from directory if it exists
         if self.tasks_dir.exists() {
             info!("Loading tasks from {}", self.tasks_dir.display());
-            
-            for entry in fs::read_dir(&self.tasks_dir)? {
-                let entry = entry?;
-                let path = entry.path();
-                
-                if path.extension().and_then(|s| s.to_str()) == Some("yaml") ||
-                   path.extension().and_then(|s| s.to_str()) == Some("yml") {
-                    match self.load_task_file(&path) {
-                        Ok(task) => {
-                            if task.enabled {
-                                info!("Loaded task: {} ({})", task.name, task.id);
-                                tasks.push(task);
-                            } else {
-                                debug!("Skipping disabled task: {}", task.id);
-                            }
-                        }
-                        Err(e) => {
-                            warn!("Failed to load task from {}: {}", path.display(), e);
-                        }
-                    }
-                }
-            }
+            self.load_tasks_recursive(&self.tasks_dir, &mut tasks)?;
             
             if tasks.is_empty() {
                 warn!("No valid task files found in {}", self.tasks_dir.display());
@@ -116,6 +95,43 @@ impl TaskLoader {
         }
         
         Ok(tasks)
+    }
+    
+    /// Recursively load tasks from a directory and its subdirectories
+    fn load_tasks_recursive(&self, dir: &Path, tasks: &mut Vec<AnalysisTask>) -> Result<()> {
+        for entry in fs::read_dir(dir)? {
+            let entry = entry?;
+            let path = entry.path();
+            
+            if path.is_dir() {
+                // Skip the legacy directory to avoid loading old tasks
+                if path.file_name().and_then(|s| s.to_str()) == Some("legacy") {
+                    debug!("Skipping legacy directory: {}", path.display());
+                    continue;
+                }
+                
+                // Recursively scan subdirectories
+                debug!("Scanning subdirectory: {}", path.display());
+                self.load_tasks_recursive(&path, tasks)?;
+            } else if path.extension().and_then(|s| s.to_str()) == Some("yaml") ||
+                      path.extension().and_then(|s| s.to_str()) == Some("yml") {
+                match self.load_task_file(&path) {
+                    Ok(task) => {
+                        if task.enabled {
+                            info!("Loaded task: {} ({})", task.name, task.id);
+                            tasks.push(task);
+                        } else {
+                            debug!("Skipping disabled task: {}", task.id);
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to load task from {}: {}", path.display(), e);
+                    }
+                }
+            }
+        }
+        
+        Ok(())
     }
     
     fn load_task_file(&self, path: &Path) -> Result<AnalysisTask> {

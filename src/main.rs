@@ -645,6 +645,9 @@ fn load_snapshot_from_directory(path: &PathBuf) -> Result<Snapshot> {
         // Store in custom field
         snapshot.collectors.custom.insert("cluster".to_string(), cluster_data.clone());
         
+        // Also store as admin data since cluster data contains admin information (brokers, topics, etc.)
+        snapshot.collectors.admin = Some(cluster_data.clone());
+        
         // Check for kafkactl data
         if let Some(cluster_obj) = cluster_data.as_object() {
             if cluster_obj.contains_key("kafkactl") {
