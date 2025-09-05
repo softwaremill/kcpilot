@@ -1,0 +1,89 @@
+id: jvm_heap_memory_ratio
+name: JVM Heap vs System Memory Ratio Check
+description: Verifies that JVM heap memory does not exceed 25% of total system RAM to ensure sufficient memory for OS page cache
+category: configuration
+
+prompt: |
+  Analyze Kafka broker JVM heap memory usage relative to total system memory:
+  
+  System data: {system}
+  Configuration data: {config}
+  
+  IMPORTANT: Extract EXACT Xmx values and total system memory for each broker.
+  
+  Step 1: Extract Data from Each Broker
+  1. Find Xmx parameter from Kafka java processes (ps aux output or kafka_process.txt files)
+  2. Find total system memory from memory.txt files (look for "total" in free command output)
+  3. Convert both values to comparable units (GB for consistency)
+  4. Calculate ratio: heap_size / total_memory
+  
+  Step 2: Memory Ratio Analysis
+  Calculate heap ratio percentage for each broker: ratio = (Xmx_GB / total_RAM_GB) * 100
+  Check if heap memory exceeds 25% of total system RAM:
+  - If ratio > 25%: WARNING (insufficient memory left for page cache)
+  - If ratio <= 25%: INFO (adequate memory allocation balance)
+  
+  CRITICAL: The ratio must be calculated correctly and compared against 25%
+  
+  Step 3: Provide Specific Results
+  IMPORTANT: Analyze each broker individually and report per-broker findings.
+  
+  If ALL brokers have appropriate heap ratios (≤25% of RAM), return:
+  {
+    "findings": [
+      {
+        "type": "jvm_heap_memory_ratio_check",
+        "description": "All X brokers have JVM heap memory within recommended 25% of total system RAM limit (highest ratio: Y%). Sufficient memory is available for OS page cache and optimal I/O performance.",
+        "severity": "info",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "xmx_gb": 4.0, "total_ram_gb": 32.0, "heap_ratio_percent": 12.5, "exceeds_limit": false},
+          {"broker_id": "broker_1", "xmx_gb": 6.0, "total_ram_gb": 32.0, "heap_ratio_percent": 18.8, "exceeds_limit": false}
+        ],
+        "recommendation": "Memory allocation is optimally balanced for Kafka performance"
+      }
+    ]
+  }
+  
+  IMPORTANT: Only return this if ALL calculated ratios are actually <= 25%
+  
+  If ANY brokers have excessive heap ratios (>25% of RAM), return:
+  {
+    "findings": [
+      {
+        "type": "jvm_heap_memory_ratio_check",
+        "description": "WARNING: X out of Y brokers have JVM heap memory exceeding 25% of total system RAM. Brokers with issues: broker_1 (heap=8GB, RAM=16GB, ratio=50%), broker_3 (heap=6GB, RAM=16GB, ratio=37.5%). Kafka heavily relies on OS page cache for performance - insufficient system memory will negatively impact I/O performance.",
+        "severity": "warning",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "xmx_gb": 4.0, "total_ram_gb": 16.0, "heap_ratio_percent": 25.0, "exceeds_limit": false},
+          {"broker_id": "broker_1", "xmx_gb": 8.0, "total_ram_gb": 16.0, "heap_ratio_percent": 50.0, "exceeds_limit": true},
+          {"broker_id": "broker_3", "xmx_gb": 6.0, "total_ram_gb": 16.0, "heap_ratio_percent": 37.5, "exceeds_limit": true}
+        ],
+        "recommendation": "Reduce heap sizes or increase system RAM to ensure heap uses ≤25% of total memory, leaving sufficient memory for OS page cache"
+      }
+    ]
+  }
+  
+  Performance Impact Explanation:
+  - Kafka relies heavily on OS page cache for sequential I/O performance
+  - Page cache accelerates reads from disk by keeping recently accessed data in memory
+  - Large heap sizes reduce available memory for page cache, hurting I/O performance
+  - The 25% threshold ensures 75% of RAM remains available for OS caching mechanisms
+  - Proper balance: small heap + large page cache = optimal Kafka performance
+  - This threshold is approximate but provides good balance for typical Kafka workloads
+  
+  IMPORTANT: Always include specific numerical values (heap size, total RAM, percentage) for each broker in the description.
+
+include_data:
+  - system
+  - config
+
+severity_keywords:
+  "exceeding 25%": "warning"
+  "insufficient system memory": "warning"
+  "negatively impact": "warning"
+  "within 25%": "info"
+  "sufficient memory": "info"
+  "optimally balanced": "info"
+
+default_severity: warning
+enabled: true
