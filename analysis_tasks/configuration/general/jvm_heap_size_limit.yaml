@@ -1,0 +1,83 @@
+id: jvm_heap_size_limit
+name: JVM Heap Size Limit Check
+description: Verifies that JVM heap memory settings are not set above 8GB to prevent performance degradation
+category: configuration
+
+prompt: |
+  Analyze Kafka broker JVM heap memory settings to detect excessive memory allocation:
+  
+  System data: {system}
+  Configuration data: {config}
+  
+  IMPORTANT: Extract the EXACT Xms and Xmx values from each broker's Kafka process command line.
+  
+  Step 1: Extract JVM Heap Settings from Each Broker
+  1. Look for Kafka java processes in ps aux output or kafka_process.txt files for EACH broker
+  2. Find -Xms and -Xmx parameters in each java command line  
+  3. Parse the memory values (e.g., 4G, 2048M, 8192M, 12G, etc.) for each broker individually
+  4. Convert all values to GB for comparison (1024M = 1G, 8192M = 8G, etc.)
+  
+  Step 2: Performance Analysis
+  Check if heap sizes exceed 8GB limit:
+  - If Xms > 8GB OR Xmx > 8GB: WARNING (excessive memory allocation can cause performance issues)
+  - If Xms <= 8GB AND Xmx <= 8GB: INFO (heap sizes are within recommended limits)
+  
+  Step 3: Provide Specific Results
+  IMPORTANT: Analyze each broker individually and report per-broker findings.
+  
+  If ALL brokers have heap sizes within limits (<=8GB), return:
+  {
+    "findings": [
+      {
+        "type": "jvm_heap_size_limit_check",
+        "description": "All X brokers have JVM heap memory within recommended 8GB limit (largest: Xms=XG, Xmx=XG). Memory allocation is appropriate for optimal performance.",
+        "severity": "info",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "xms_gb": 4.0, "xmx_gb": 4.0, "exceeds_limit": false},
+          {"broker_id": "broker_1", "xms_gb": 4.0, "xmx_gb": 4.0, "exceeds_limit": false}
+        ],
+        "recommendation": "Heap sizes are optimal for Kafka performance"
+      }
+    ]
+  }
+  
+  If ANY brokers have excessive heap sizes (>8GB), return:
+  {
+    "findings": [
+      {
+        "type": "jvm_heap_size_limit_check",
+        "description": "WARNING: X out of Y brokers have excessive JVM heap memory allocation above 8GB limit. Brokers with issues: broker_1 (Xms=12G, Xmx=16G), broker_3 (Xms=10G, Xmx=10G). Excessive heap sizes can cause performance degradation due to longer GC pauses.",
+        "severity": "warning",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "xms_gb": 4.0, "xmx_gb": 4.0, "exceeds_limit": false},
+          {"broker_id": "broker_1", "xms_gb": 12.0, "xmx_gb": 16.0, "exceeds_limit": true},
+          {"broker_id": "broker_3", "xms_gb": 10.0, "xmx_gb": 10.0, "exceeds_limit": true}
+        ],
+        "recommendation": "Reduce heap sizes to 8GB or less for affected brokers to improve GC performance and overall throughput"
+      }
+    ]
+  }
+  
+  Performance Impact Explanation:
+  - Kafka benefits most from page cache rather than large heap sizes
+  - Heap sizes above 8GB can cause longer garbage collection pauses
+  - Excessive heap reduces memory available for OS page cache which hurts I/O performance
+  - Kafka's sequential I/O patterns work better with more page cache than large heap
+  - Recommended heap sizes: 4-8GB for optimal balance
+  
+  IMPORTANT: Always include the specific numerical values found in GB for each broker in the description field.
+
+include_data:
+  - system
+  - config
+
+severity_keywords:
+  "excessive": "warning"
+  "above 8GB": "warning"
+  "performance degradation": "warning"
+  "longer GC pauses": "warning"
+  "within recommended": "info"
+  "optimal": "info"
+
+default_severity: warning
+enabled: true
