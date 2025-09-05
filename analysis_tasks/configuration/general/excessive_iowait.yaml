@@ -1,0 +1,84 @@
+id: excessive_iowait
+name: Excessive IOWait Detection
+description: Detects excessive iowait that indicates disk or network performance issues
+category: configuration
+
+prompt: |
+  Analyze system iowait metrics to identify potential disk or network performance problems:
+  
+  System data: {system}
+  
+  IMPORTANT: Extract iowait values and CPU core count for each broker.
+  
+  Step 1: Extract Data from Each Broker
+  1. Find iowait percentage from system monitoring data (look for CPU statistics, iostat, top output, or similar)
+  2. Extract CPU core count from /proc/cpuinfo or similar system info
+  3. Calculate threshold: iowait should not exceed 1 * number_of_cores percent
+  
+  Step 2: IOWait Analysis
+  For each broker, check if average iowait percentage > number_of_CPU_cores:
+  - If iowait% > core_count: WARNING (performance bottleneck with disks or network)
+  - If iowait% <= core_count: INFO (acceptable I/O wait levels)
+  
+  CRITICAL: The comparison must be iowait_percentage vs core_count (not absolute values)
+  
+  Step 3: Provide Specific Results
+  IMPORTANT: Analyze each broker individually and report per-broker findings.
+  
+  If ALL brokers have acceptable iowait levels (≤ core count), return:
+  {
+    "findings": [
+      {
+        "type": "excessive_iowait_check",
+        "description": "All X brokers have acceptable iowait levels within recommended threshold (highest: Y% on Z-core system, threshold: Z%). No significant disk or network performance bottlenecks detected.",
+        "severity": "info",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "iowait_percent": 2.1, "cpu_cores": 8, "threshold_percent": 8.0, "exceeds_threshold": false},
+          {"broker_id": "broker_1", "iowait_percent": 3.5, "cpu_cores": 8, "threshold_percent": 8.0, "exceeds_threshold": false}
+        ],
+        "recommendation": "System I/O performance is within acceptable parameters"
+      }
+    ]
+  }
+  
+  If ANY brokers have excessive iowait (> core count), return:
+  {
+    "findings": [
+      {
+        "type": "excessive_iowait_check",
+        "description": "WARNING: X out of Y brokers have excessive iowait indicating disk or network performance bottlenecks. Affected brokers: broker_1 (iowait=12% on 8-core system, threshold=8%), broker_2 (iowait=15% on 4-core system, threshold=4%). High iowait indicates the system is spending significant time waiting for I/O operations to complete.",
+        "severity": "warning",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "iowait_percent": 3.0, "cpu_cores": 8, "threshold_percent": 8.0, "exceeds_threshold": false},
+          {"broker_id": "broker_1", "iowait_percent": 12.0, "cpu_cores": 8, "threshold_percent": 8.0, "exceeds_threshold": true},
+          {"broker_id": "broker_2", "iowait_percent": 15.0, "cpu_cores": 4, "threshold_percent": 4.0, "exceeds_threshold": true}
+        ],
+        "recommendation": "Investigate disk I/O performance (check disk utilization, RAID health, disk types), network performance (latency, bandwidth), and consider upgrading storage subsystem or optimizing Kafka configuration for I/O patterns"
+      }
+    ]
+  }
+  
+  Performance Impact Explanation:
+  - IOWait represents time CPU spends waiting for I/O operations (disk reads/writes, network)
+  - High iowait indicates system bottlenecks in storage or network subsystems
+  - Kafka is I/O intensive with frequent disk writes (logs) and reads (consumer requests)
+  - Excessive iowait degrades overall Kafka throughput and increases latency
+  - The threshold of 1×core_count provides reasonable headroom for normal I/O operations
+  - Values above this threshold suggest the I/O subsystem cannot keep up with demand
+  
+  IMPORTANT: Always include specific numerical values (iowait%, core count, threshold) for each broker in the description.
+
+include_data:
+  - system
+
+severity_keywords:
+  "excessive iowait": "warning"
+  "performance bottlenecks": "warning"
+  "disk or network performance": "warning"
+  "cannot keep up": "warning"
+  "acceptable iowait": "info"
+  "within acceptable": "info"
+  "no significant": "info"
+
+default_severity: warning
+enabled: true

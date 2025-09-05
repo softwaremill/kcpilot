@@ -1,0 +1,119 @@
+id: authentication_authorization
+name: Authentication and Authorization Configuration Check
+description: Verifies that authentication and authorization are enabled and anonymous access is blocked to prevent unauthorized access
+category: configuration
+
+prompt: |
+  Analyze Kafka broker authentication and authorization configuration to detect secure access control:
+  
+  Configuration data: {config}
+  System data: {system}
+  
+  IMPORTANT: Extract authentication-related configuration from server.properties and environment files for each broker.
+  
+  Step 1: Extract Authentication Configuration
+  Examine the following authentication methods for each broker:
+  
+  1. SSL Client Authentication:
+     - ssl.client.auth=required (in listener.security.protocol.map with SSL)
+  
+  2. SASL with SSL:
+     - listener.security.protocol.map contains SASL_SSL
+     - JAAS config set in KAFKA_OPTS environment variable
+  
+  3. SASL SCRAM:
+     - listener.security.protocol.map contains SASL_SSL
+     - sasl.enabled.mechanisms=SCRAM-SHA-256,SCRAM-SHA-512
+     - sasl.mechanism.inter.broker.protocol=SCRAM-SHA-512
+     - Check for configured SCRAM users via kafka-config.sh commands
+  
+  4. SASL Kerberos (GSSAPI):
+     - listener.security.protocol.map contains SASL_PLAINTEXT
+     - sasl.mechanism.inter.broker.protocol=GSSAPI
+     - sasl.enabled.mechanisms=GSSAPI
+     - krb5.conf and keytab files present
+  
+  5. SASL OAUTHBEARER:
+     - listener.security.protocol.map contains SASL_SSL
+     - sasl.enabled.mechanisms=OAUTHBEARER
+     - sasl.mechanism.inter.broker.protocol=OAUTHBEARER
+     - token provider class configured
+  
+  6. AWS MSK IAM:
+     - sasl.mechanism=AWS_MSK_IAM
+     - listener.security.protocol.map contains SASL_SSL
+     - sasl.jaas.config=software.amazon.msk.auth.iam.IAMLoginModule required;
+     - sasl.client.callback.handler.class=software.amazon.msk.auth.iam.IAMClientCallbackHandler
+  
+  Step 2: Security Analysis
+  Check authentication status:
+  - SECURE: Any of the above authentication methods are properly configured
+  - INSECURE: None of the authentication methods are configured (anonymous access allowed)
+  
+  Step 3: Provide Specific Results
+  IMPORTANT: Analyze each broker individually and report per-broker findings.
+  
+  If ALL brokers have secure authentication configured, return:
+  {
+    "findings": [
+      {
+        "type": "authentication_authorization_check",
+        "description": "All X brokers have authentication and authorization properly configured. Found secure authentication method: [SSL client auth|SASL SCRAM|SASL Kerberos|SASL OAUTHBEARER|AWS MSK IAM]. Anonymous access is blocked and only authenticated users can access the cluster.",
+        "severity": "info",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "has_authentication": true, "auth_method": "SASL_SCRAM", "details": "SCRAM-SHA-512 with inter-broker authentication"},
+          {"broker_id": "broker_1", "has_authentication": true, "auth_method": "SSL_CLIENT_AUTH", "details": "SSL client authentication required"}
+        ],
+        "recommendation": "Authentication configuration is properly implemented for security"
+      }
+    ]
+  }
+  
+  If ANY brokers lack authentication configuration, return:
+  {
+    "findings": [
+      {
+        "type": "authentication_authorization_check",
+        "description": "CRITICAL: All X brokers have dangerous configuration without authentication or authorization. Anonymous access is allowed - any client can connect and perform operations without credentials. No access control, user verification, or authorization checks are in place.",
+        "severity": "critical",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "has_authentication": false, "auth_method": "NONE", "details": "PLAINTEXT listeners, ssl.client.auth=none, no SASL configuration"},
+          {"broker_id": "broker_1", "has_authentication": false, "auth_method": "NONE", "details": "PLAINTEXT listeners, ssl.client.auth=none, no SASL configuration"}
+        ],
+        "recommendation": "Configure authentication using SSL client certificates, SASL SCRAM, Kerberos, OAUTHBEARER, or AWS MSK IAM to prevent unauthorized access"
+      }
+    ]
+  }
+  
+  Security Impact Analysis:
+  - Anonymous access allows any client to connect without credentials
+  - Unauthorized users can read, write, and delete data
+  - No audit trail for user actions
+  - Compliance violations (SOX, GDPR, PCI-DSS typically require authentication)
+  - Internal threats and accidental data exposure risks
+  - No fine-grained access control or authorization
+  
+  Authentication Methods Detection Criteria:
+  1. SSL Client Auth: ssl.client.auth=required AND SSL in security protocol map
+  2. SASL SCRAM: SASL_SSL protocol + SCRAM mechanisms + configured users
+  3. SASL Kerberos: SASL_* protocol + GSSAPI + krb5/keytab files
+  4. SASL OAUTHBEARER: SASL_SSL + OAUTHBEARER mechanism + token provider
+  5. AWS MSK IAM: AWS_MSK_IAM mechanism + IAM login module + callback handler
+  
+  IMPORTANT: Always include the specific authentication method details and configuration status for each broker.
+
+include_data:
+  - config
+  - system
+
+severity_keywords:
+  "dangerous configuration": "critical"
+  "anonymous access": "critical"
+  "unauthorized": "critical"
+  "no access control": "critical"
+  "authentication.*configured": "info"
+  "properly implemented": "info"
+  "blocked": "info"
+
+default_severity: critical
+enabled: true

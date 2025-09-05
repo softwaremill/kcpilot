@@ -182,6 +182,8 @@ impl BastionCollector {
             ("memory", "free -h"),
             ("disk", "df -h"),
             ("processes", "ps aux | grep -E 'kafka|zookeeper' | grep -v grep"),
+            ("lscpu", "lscpu 2>/dev/null"),
+            ("cpuinfo", "cat /proc/cpuinfo 2>/dev/null"),
         ];
         
         for (name, cmd) in commands {
@@ -662,6 +664,8 @@ impl BrokerCollector {
             ("memory", "free -h"),
             ("disk", "df -h"),
             ("cpu", "cat /proc/cpuinfo | grep -E 'processor|model name' | head -20"),
+            ("lscpu", "lscpu 2>/dev/null"),
+            ("cpuinfo", "cat /proc/cpuinfo 2>/dev/null"),
         ];
         
         for (name, cmd) in system_commands {

@@ -1,0 +1,86 @@
+id: minimum_cpu_cores
+name: Minimum CPU Core Count Check
+description: Verifies that each broker has at least 4 CPU cores for adequate performance
+category: configuration
+
+prompt: |
+  Analyze CPU core count for each Kafka broker to ensure adequate processing capacity:
+  
+  System data: {system}
+  
+  IMPORTANT: Extract CPU core count from system information for each broker.
+  
+  Step 1: Extract Data from Each Broker
+  1. Find CPU core count from lscpu output, /proc/cpuinfo, or similar system information
+  2. Look for "CPU(s)" field in lscpu or count processor entries in /proc/cpuinfo
+  3. Extract total number of available CPU cores (logical processors)
+  
+  Step 2: CPU Core Analysis
+  For each broker, check if CPU core count >= 4:
+  - If cores < 4: WARNING (insufficient CPU resources for Kafka workload)
+  - If cores >= 4: INFO (adequate CPU resources available)
+  
+  CRITICAL: The comparison must be against the minimum threshold of 4 cores
+  
+  Step 3: Provide Specific Results
+  IMPORTANT: Analyze each broker individually and report per-broker findings.
+  
+  If ALL brokers have adequate CPU cores (>=4), return:
+  {
+    "findings": [
+      {
+        "type": "minimum_cpu_cores_check",
+        "description": "All X brokers have adequate CPU core count meeting minimum requirement of 4 cores (lowest: Y cores). Sufficient processing capacity available for Kafka workloads.",
+        "severity": "info",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "cpu_cores": 8, "meets_minimum": true},
+          {"broker_id": "broker_1", "cpu_cores": 12, "meets_minimum": true}
+        ],
+        "recommendation": "CPU configuration is adequate for typical Kafka workloads"
+      }
+    ]
+  }
+  
+  If ANY brokers have insufficient CPU cores (<4), return:
+  {
+    "findings": [
+      {
+        "type": "minimum_cpu_cores_check",
+        "description": "WARNING: X out of Y brokers have insufficient CPU core count below minimum requirement of 4 cores. Affected brokers: broker_1 (2 cores), broker_3 (1 core). This is an inadequate configuration that may severely impact Kafka performance, especially under moderate to high load conditions.",
+        "severity": "warning",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "cpu_cores": 8, "meets_minimum": true},
+          {"broker_id": "broker_1", "cpu_cores": 2, "meets_minimum": false},
+          {"broker_id": "broker_2", "cpu_cores": 6, "meets_minimum": true},
+          {"broker_id": "broker_3", "cpu_cores": 1, "meets_minimum": false}
+        ],
+        "recommendation": "Upgrade to instances with at least 4 CPU cores per broker. Consider 8+ cores for production workloads with high throughput requirements."
+      }
+    ]
+  }
+  
+  Performance Impact Explanation:
+  - Kafka brokers handle multiple concurrent operations: network I/O, disk I/O, compression, replication
+  - Each operation benefits from dedicated CPU resources for optimal performance
+  - Minimum 4 cores allows for parallel processing of producer/consumer requests
+  - Insufficient CPU cores create bottlenecks that limit throughput and increase latency
+  - Modern Kafka deployments typically require 8+ cores for production workloads
+  - CPU-bound operations like compression, serialization, and network handling need adequate processing power
+  - The 4-core minimum represents the bare minimum for lightweight development/testing scenarios
+  
+  IMPORTANT: Always include specific numerical values (core count) for each broker in the description.
+
+include_data:
+  - system
+
+severity_keywords:
+  "insufficient CPU": "warning"
+  "below minimum requirement": "warning"
+  "inadequate configuration": "warning"
+  "severely impact": "warning"
+  "adequate CPU": "info"
+  "sufficient processing": "info"
+  "meets minimum": "info"
+
+default_severity: warning
+enabled: true

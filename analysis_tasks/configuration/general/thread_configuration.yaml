@@ -1,0 +1,169 @@
+id: thread_configuration
+name: Thread Configuration Validation
+description: Validates network, I/O, and replication thread settings to prevent performance issues or broker failures
+category: configuration
+
+prompt: |
+  Analyze Kafka broker thread configuration parameters to identify potential performance issues:
+  
+  Configuration data: {config}
+  Cluster data: {admin}
+  
+  IMPORTANT: Extract thread configuration parameters and partition counts from each broker.
+  
+  Step 1: Extract Data from Each Broker
+  1. Find num.network.threads parameter in server.properties (default: 3)
+  2. Find num.io.threads parameter in server.properties (default: 8)
+  3. Find num.replica.fetchers parameter in server.properties (default: 1)
+  4. Estimate partitions per broker from topic data if available
+  5. Detect storage type (HDD/SSD/NVMe) from system info if available
+  
+  Step 2: Thread Configuration Analysis
+  For each broker, validate thread settings against these rules:
+  
+  Network Threads (num.network.threads):
+  - If == 1: WARNING (insufficient for production load)
+  - If > 20: WARNING (excessive, may cause context switching overhead)
+  - Optimal range: 2-20 threads
+  
+  I/O Threads (num.io.threads):
+  - If < 2: WARNING (insufficient I/O parallelism)
+  - If > 6 with HDD storage: WARNING (excessive for mechanical disks)
+  - If > 12 with SSD storage: WARNING (excessive for solid state disks)
+  - If > 32 with NVMe storage: WARNING (excessive even for high-performance storage)
+  - Optimal ranges: HDD: 2-6, SSD: 2-12, NVMe: 2-32
+  
+  Replica Fetchers (num.replica.fetchers):
+  - Calculate recommended: 1 + int(partitions_per_broker / 500)
+  - If > recommended: WARNING (excessive replica fetcher threads)
+  - Optimal: scale with partition count, ~1 fetcher per 500 partitions
+  
+  Step 3: Provide Specific Results
+  IMPORTANT: Analyze each broker individually and report per-broker findings.
+  
+  If ALL brokers have optimal thread configurations, return:
+  {
+    "findings": [
+      {
+        "type": "thread_configuration_check",
+        "description": "All X brokers have optimal thread configurations. Network threads: Y (within 2-20), I/O threads: Z (appropriate for storage type), Replica fetchers: W (scaled appropriately for partition count). No performance bottlenecks or excessive resource usage detected.",
+        "severity": "info",
+        "brokers_analyzed": [
+          {
+            "broker_id": "broker_0",
+            "network_threads": 8,
+            "network_threads_optimal": true,
+            "io_threads": 6,
+            "io_threads_optimal": true,
+            "storage_type": "SSD",
+            "replica_fetchers": 3,
+            "replica_fetchers_optimal": true,
+            "estimated_partitions": 1200,
+            "recommended_replica_fetchers": 3
+          }
+        ],
+        "recommendation": "Thread configurations are optimally tuned for current workload and storage characteristics"
+      }
+    ]
+  }
+  
+  If ANY brokers have suboptimal thread configurations, return:
+  {
+    "findings": [
+      {
+        "type": "thread_configuration_check",
+        "description": "WARNING: X out of Y brokers have suboptimal thread configurations that may cause performance issues or broker failures. Issues detected: broker_1 (network threads=1, insufficient for production), broker_2 (I/O threads=15 with SSD, excessive causing context switching), broker_3 (replica fetchers=8 for 800 partitions, recommended=2). Improper thread configuration can lead to request timeouts, reduced throughput, increased latency, and in extreme cases broker instability.",
+        "severity": "warning",
+        "brokers_analyzed": [
+          {
+            "broker_id": "broker_0",
+            "network_threads": 8,
+            "network_threads_optimal": true,
+            "io_threads": 4,
+            "io_threads_optimal": true,
+            "storage_type": "SSD",
+            "replica_fetchers": 2,
+            "replica_fetchers_optimal": true,
+            "estimated_partitions": 600,
+            "recommended_replica_fetchers": 2
+          },
+          {
+            "broker_id": "broker_1",
+            "network_threads": 1,
+            "network_threads_optimal": false,
+            "network_threads_issue": "insufficient for production load",
+            "io_threads": 8,
+            "io_threads_optimal": true,
+            "storage_type": "SSD",
+            "replica_fetchers": 1,
+            "replica_fetchers_optimal": true,
+            "estimated_partitions": 400,
+            "recommended_replica_fetchers": 1
+          },
+          {
+            "broker_id": "broker_2",
+            "network_threads": 10,
+            "network_threads_optimal": true,
+            "io_threads": 15,
+            "io_threads_optimal": false,
+            "io_threads_issue": "excessive for SSD storage, may cause context switching overhead",
+            "storage_type": "SSD",
+            "replica_fetchers": 2,
+            "replica_fetchers_optimal": true,
+            "estimated_partitions": 800,
+            "recommended_replica_fetchers": 2
+          },
+          {
+            "broker_id": "broker_3",
+            "network_threads": 6,
+            "network_threads_optimal": true,
+            "io_threads": 6,
+            "io_threads_optimal": true,
+            "storage_type": "SSD",
+            "replica_fetchers": 8,
+            "replica_fetchers_optimal": false,
+            "replica_fetchers_issue": "excessive for partition count",
+            "estimated_partitions": 800,
+            "recommended_replica_fetchers": 2
+          }
+        ],
+        "recommendation": "Adjust thread configurations: set network threads 2-20, I/O threads based on storage type (HDD: 2-6, SSD: 2-12, NVMe: 2-32), replica fetchers ~1 per 500 partitions. Monitor CPU usage and request latency after changes."
+      }
+    ]
+  }
+  
+  Performance Impact Explanation:
+  - Network threads handle client connections and requests - too few causes request queuing, too many causes context switching
+  - I/O threads handle disk operations - optimal count depends on storage characteristics and parallelism capabilities
+  - HDD storage benefits from fewer threads due to sequential access patterns and seek time limitations
+  - SSD storage can handle more parallel I/O operations but excessive threads cause diminishing returns
+  - NVMe storage supports highest parallelism but even it has limits before overhead dominates
+  - Replica fetcher threads handle replication between brokers - should scale with partition count
+  - Excessive replica fetchers waste resources and can overwhelm network and disk I/O
+  - Too few replica fetchers can create replication lag and impact cluster resilience
+  - Thread configuration directly affects broker stability, throughput, and latency characteristics
+  
+  Default Values (when not explicitly configured):
+  - num.network.threads: 3 (often too low for production)
+  - num.io.threads: 8 (reasonable starting point)
+  - num.replica.fetchers: 1 (scales poorly with partition count)
+  
+  IMPORTANT: Always include specific numerical values (thread counts, partition estimates, recommendations) for each broker in the description.
+
+include_data:
+  - config
+  - admin
+
+severity_keywords:
+  "suboptimal thread configurations": "warning"
+  "may cause performance issues": "warning"
+  "broker failures": "warning"
+  "insufficient for production": "warning"
+  "excessive causing": "warning"
+  "broker instability": "warning"
+  "optimal thread configurations": "info"
+  "optimally tuned": "info"
+  "no performance bottlenecks": "info"
+
+default_severity: warning
+enabled: true

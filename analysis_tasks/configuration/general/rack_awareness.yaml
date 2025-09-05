@@ -1,0 +1,96 @@
+id: rack_awareness
+name: Rack Awareness Configuration Check
+description: Verifies that rack awareness is properly configured for high availability across failure zones
+category: configuration
+
+prompt: |
+  Analyze Kafka broker configuration to check if rack awareness is properly configured:
+  
+  Configuration data: {config}
+  
+  IMPORTANT: Extract broker.rack parameter from server.properties for each broker.
+  
+  Step 1: Extract Data from Each Broker
+  1. Find broker.rack parameter in server.properties configuration files
+  2. Check if broker.rack is set to a meaningful value (not empty, not default)
+  3. Verify that different brokers have different rack identifiers
+  
+  Step 2: Rack Awareness Analysis
+  For the cluster, check rack awareness configuration:
+  - If broker.rack is NOT configured or empty on any broker: CRITICAL/WARNING (no rack awareness)
+  - If broker.rack is configured but all brokers have same rack: WARNING (ineffective rack awareness)
+  - If broker.rack is properly configured with different racks: INFO (proper rack awareness)
+  
+  CRITICAL: Determine severity based on environment context - if this appears to be production use CRITICAL, if non-production use WARNING
+  
+  Step 3: Provide Specific Results
+  IMPORTANT: Analyze each broker individually and report per-broker findings.
+  
+  If ALL brokers have proper rack awareness configured with different rack identifiers, return:
+  {
+    "findings": [
+      {
+        "type": "rack_awareness_check",
+        "description": "All X brokers have rack awareness properly configured with distinct rack identifiers (racks: rack1, rack2, rack3). This enables Kafka to distribute replicas across failure zones for improved high availability.",
+        "severity": "info",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "rack_id": "rack1", "rack_configured": true},
+          {"broker_id": "broker_1", "rack_id": "rack2", "rack_configured": true},
+          {"broker_id": "broker_2", "rack_id": "rack3", "rack_configured": true}
+        ],
+        "recommendation": "Rack awareness is properly configured for optimal replica distribution across failure zones"
+      }
+    ]
+  }
+  
+  If rack awareness is NOT configured or improperly configured, return:
+  {
+    "findings": [
+      {
+        "type": "rack_awareness_check",
+        "description": "CRITICAL/WARNING: Kafka cluster lacks proper rack awareness configuration. X out of Y brokers have missing or identical broker.rack settings. Without rack awareness, Kafka cannot ensure replicas are distributed across different failure zones (racks/datacenters/availability zones), limiting high availability beyond individual broker failures. This significantly reduces fault tolerance in case of rack-level, datacenter-level, or zone-level outages.",
+        "severity": "critical",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "rack_id": "", "rack_configured": false},
+          {"broker_id": "broker_1", "rack_id": "", "rack_configured": false},
+          {"broker_id": "broker_2", "rack_id": "rack1", "rack_configured": true}
+        ],
+        "recommendation": "Configure broker.rack parameter in server.properties for each broker with unique rack identifiers representing physical failure zones (e.g., broker.rack=zone-1a, broker.rack=zone-1b, broker.rack=zone-1c). Ensure replica.lag.max.messages and replica.lag.time.max.ms are appropriately configured for cross-rack latency."
+      }
+    ]
+  }
+  
+  High Availability Impact Explanation:
+  - Rack awareness enables Kafka to distribute replicas across different physical failure zones
+  - Without rack awareness, all replicas might be placed in the same rack/zone/datacenter
+  - Rack/zone/datacenter failures can cause complete topic unavailability if replicas are co-located
+  - Proper rack awareness ensures that losing an entire rack/zone still maintains data availability
+  - The broker.rack parameter should reflect actual physical or logical failure boundaries
+  - Common rack identifiers: datacenter names, availability zones, physical racks, network segments
+  - Rack awareness is essential for production deployments requiring high availability
+  - Non-production environments benefit from rack awareness for testing failure scenarios
+  
+  Environment Detection Guidelines:
+  - Look for production indicators: multiple datacenters, zone names (us-east-1a), production hostnames
+  - Look for non-production indicators: single datacenter, simple names (broker1, test), dev/staging references
+  - Use CRITICAL severity for production-like environments, WARNING for non-production
+  
+  IMPORTANT: Always include specific rack identifiers and configuration status for each broker in the description.
+
+include_data:
+  - config
+
+severity_keywords:
+  "lacks proper rack awareness": "critical"
+  "missing or identical": "critical"
+  "cannot ensure replicas": "critical"
+  "significantly reduces": "critical"
+  "lacks rack awareness": "warning"
+  "not configured": "warning"
+  "no rack awareness": "warning"
+  "properly configured": "info"
+  "distinct rack identifiers": "info"
+  "optimal replica distribution": "info"
+
+default_severity: critical
+enabled: true

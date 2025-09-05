@@ -1,0 +1,160 @@
+id: recent_log_errors
+name: Recent Log Error Detection
+description: Analyzes logs from the last 24 hours to detect error messages indicating broker stability or availability issues
+category: configuration
+
+prompt: |
+  Analyze Kafka broker logging configuration and recent log entries to detect error conditions from the last 24 hours:
+  
+  Configuration data: {config}
+  Logs data: {logs}
+  
+  IMPORTANT: First determine logging configuration, then analyze appropriate log sources for errors.
+  
+  Step 1: Determine Logging Configuration
+  1. Examine log4j.properties or log4j2.xml configuration files
+  2. Identify log output destinations:
+     - File-based logging: Look for appender configurations with file paths
+     - Console/stdout logging: Look for console appenders or stdout redirection
+     - System journal logging: Check if logs are directed to systemd journal
+  3. Determine appropriate log sources to analyze based on configuration
+  
+  Step 2: Log Source Analysis Strategy
+  Based on logging configuration:
+  - If DEDICATED FILE logging detected: Analyze server.log, controller.log, kafka.log files
+  - If STDOUT/CONSOLE logging detected: Analyze journalctl output for Kafka service
+  - If MIXED or UNCLEAR: Analyze both file-based logs and journal logs
+  
+  Step 3: Error Pattern Detection
+  Search for error indicators in the last 24 hours of logs:
+  - ERROR level messages
+  - FATAL level messages  
+  - Exception stack traces
+  - Connection failures, timeouts
+  - Replication errors
+  - Disk I/O errors
+  - Memory or resource exhaustion
+  - Authentication/authorization failures
+  - Network connectivity issues
+  
+  Step 4: Provide Specific Results
+  IMPORTANT: Analyze each broker individually and report per-broker findings.
+  
+  If NO significant errors found in recent logs, return:
+  {
+    "findings": [
+      {
+        "type": "recent_log_errors_check",
+        "description": "All X brokers show clean log status for the last 24 hours. No ERROR or FATAL level messages detected in configured log destinations. Broker stability appears good with no recent error conditions indicating operational issues.",
+        "severity": "info",
+        "brokers_analyzed": [
+          {
+            "broker_id": "broker_0",
+            "logging_method": "file-based",
+            "log_sources_checked": ["server.log", "controller.log"],
+            "error_count": 0,
+            "fatal_count": 0,
+            "last_error_time": null,
+            "errors_found": false
+          }
+        ],
+        "recommendation": "Broker logs indicate stable operation with no recent error conditions"
+      }
+    ]
+  }
+  
+  If errors are detected in recent logs, return:
+  {
+    "findings": [
+      {
+        "type": "recent_log_errors_check",
+        "description": "WARNING: X out of Y brokers show error conditions in logs from the last 24 hours. Error summary: broker_1 (5 ERROR messages, 1 FATAL, topics: replication lag), broker_2 (12 ERROR messages, disk I/O timeouts), broker_3 (3 ERROR messages, network connectivity). Recent errors indicate potential stability or availability issues that may impact broker performance or cause service disruptions.",
+        "severity": "warning",
+        "brokers_analyzed": [
+          {
+            "broker_id": "broker_0",
+            "logging_method": "file-based",
+            "log_sources_checked": ["server.log", "controller.log"],
+            "error_count": 0,
+            "fatal_count": 0,
+            "errors_found": false
+          },
+          {
+            "broker_id": "broker_1", 
+            "logging_method": "journalctl",
+            "log_sources_checked": ["systemd journal"],
+            "error_count": 5,
+            "fatal_count": 1,
+            "last_error_time": "2024-01-15T14:32:10Z",
+            "error_categories": ["replication", "timeout"],
+            "sample_errors": [
+              "ERROR [ReplicaFetcher replicaId=1] Error for partition topic-1-0",
+              "FATAL [KafkaServer id=1] Fatal error during startup"
+            ],
+            "errors_found": true
+          },
+          {
+            "broker_id": "broker_2",
+            "logging_method": "mixed",
+            "log_sources_checked": ["server.log", "systemd journal"],
+            "error_count": 12,
+            "fatal_count": 0,
+            "last_error_time": "2024-01-15T16:45:22Z",
+            "error_categories": ["disk_io", "timeout"],
+            "sample_errors": [
+              "ERROR [kafka-request-handler-0] Disk error when writing to log",
+              "ERROR [kafka-network-thread-1] Connection timeout"
+            ],
+            "errors_found": true
+          }
+        ],
+        "recommendation": "Investigate recent error conditions immediately. Focus on brokers with FATAL errors first, then address ERROR messages by category. Monitor broker health closely and consider failover procedures if errors persist."
+      }
+    ]
+  }
+  
+  Error Analysis Guidelines:
+  - ERROR messages indicate operational issues that may impact performance
+  - FATAL messages indicate critical failures that may cause broker shutdown
+  - Connection/network errors suggest network infrastructure problems
+  - Replication errors indicate inter-broker communication issues
+  - Disk I/O errors suggest storage subsystem problems
+  - Memory errors indicate resource exhaustion or JVM issues
+  - Authentication errors suggest security configuration problems
+  - High error frequency (>10/hour) indicates systemic issues requiring immediate attention
+  
+  Log Source Detection Logic:
+  1. Parse log4j configuration for appender types and destinations
+  2. If file appenders found: prioritize file-based log analysis
+  3. If only console appenders: focus on journalctl/systemd journal
+  4. If no clear configuration: check both sources for comprehensive analysis
+  5. Always include timestamp analysis to focus on last 24 hours
+  
+  Common Kafka Error Patterns:
+  - "ERROR [ReplicaFetcher" - replication issues
+  - "ERROR [KafkaController" - controller election problems  
+  - "ERROR [kafka-request-handler" - request processing failures
+  - "ERROR [Log partition=" - log segment issues
+  - "FATAL [KafkaServer" - broker startup/shutdown failures
+  - "OutOfMemoryError" - heap exhaustion
+  - "IOException" - disk/network I/O problems
+  
+  IMPORTANT: Always include specific error counts, categories, and sample error messages for each broker in the description.
+
+include_data:
+  - config
+  - logs
+
+severity_keywords:
+  "error conditions in logs": "warning"
+  "FATAL messages": "warning"
+  "potential stability": "warning"
+  "service disruptions": "warning"
+  "critical failures": "warning"
+  "operational issues": "warning"
+  "clean log status": "info"
+  "no ERROR or FATAL": "info"
+  "stable operation": "info"
+
+default_severity: warning
+enabled: true

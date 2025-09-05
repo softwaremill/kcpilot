@@ -1,0 +1,124 @@
+id: log_dirs_disk_size_uniformity
+name: Log Directories Disk Size Uniformity Check
+description: Verifies that all configured log.dirs mountpoints have similar disk sizes within 10% of median
+category: configuration
+
+prompt: |
+  Analyze Kafka broker log.dirs configuration and corresponding disk sizes to ensure uniform JBOD setup:
+  
+  System data: {system}
+  Configuration data: {config}
+  
+  IMPORTANT: Extract log.dirs paths and corresponding mountpoint disk sizes for each broker.
+  
+  Step 1: Extract Data from Each Broker
+  1. Find log.dirs parameter from server.properties configuration files
+  2. Parse comma-separated log directory paths
+  3. Match each log directory path to its corresponding mountpoint from disk usage data (df output)
+  4. Extract total disk size for each mountpoint in GB
+  5. Calculate median disk size across all log.dirs mountpoints
+  
+  Step 2: Disk Size Uniformity Analysis
+  For each broker's log.dirs mountpoints:
+  1. Calculate median disk size across all log.dirs
+  2. Check if any disk size deviates more than 10% from median
+  3. Formula: deviation = |disk_size - median_size| / median_size * 100
+  4. If deviation > 10%: CRITICAL (non-uniform JBOD configuration)
+  5. If all deviations ≤ 10%: INFO (uniform disk configuration)
+  
+  CRITICAL: The comparison must account for actual mountpoint sizes, not directory usage
+  
+  Step 3: Provide Specific Results
+  IMPORTANT: Analyze each broker individually and report per-broker findings.
+  
+  If ALL brokers have uniform log.dirs disk sizes (≤10% deviation), return:
+  {
+    "findings": [
+      {
+        "type": "log_dirs_disk_size_uniformity_check",
+        "description": "All X brokers have uniform log.dirs disk sizes within 10% deviation threshold (largest deviation: Y%). JBOD configuration is properly balanced for optimal partition distribution.",
+        "severity": "info",
+        "brokers_analyzed": [
+          {
+            "broker_id": "broker_0", 
+            "log_dirs": ["/var/kafka-logs-1", "/var/kafka-logs-2", "/var/kafka-logs-3"],
+            "mountpoints": ["/dev/sda1", "/dev/sdb1", "/dev/sdc1"],
+            "disk_sizes_gb": [1000, 1020, 980],
+            "median_size_gb": 1000,
+            "max_deviation_percent": 2.0,
+            "uniform": true
+          }
+        ],
+        "recommendation": "Disk configuration is optimal for balanced partition distribution in JBOD setup"
+      }
+    ]
+  }
+  
+  If ANY brokers have non-uniform log.dirs disk sizes (>10% deviation), return:
+  {
+    "findings": [
+      {
+        "type": "log_dirs_disk_size_uniformity_check",
+        "description": "CRITICAL: X out of Y brokers have non-uniform log.dirs disk sizes exceeding 10% deviation threshold. Affected brokers: broker_1 (deviation=25%, sizes: 1000GB, 1250GB, 800GB), broker_2 (deviation=15%, sizes: 500GB, 575GB). Kafka is unaware of disk sizes and distributes partitions equally across log.dirs, causing uneven disk utilization. Non-uniform JBOD configurations are extremely difficult to balance and can lead to premature disk exhaustion.",
+        "severity": "critical",
+        "brokers_analyzed": [
+          {
+            "broker_id": "broker_0",
+            "log_dirs": ["/var/kafka-logs-1", "/var/kafka-logs-2"],
+            "mountpoints": ["/dev/sda1", "/dev/sdb1"],
+            "disk_sizes_gb": [1000, 1000],
+            "median_size_gb": 1000,
+            "max_deviation_percent": 0.0,
+            "uniform": true
+          },
+          {
+            "broker_id": "broker_1",
+            "log_dirs": ["/var/kafka-logs-1", "/var/kafka-logs-2", "/var/kafka-logs-3"],
+            "mountpoints": ["/dev/sda1", "/dev/sdb1", "/dev/sdc1"],
+            "disk_sizes_gb": [1000, 1250, 800],
+            "median_size_gb": 1000,
+            "max_deviation_percent": 25.0,
+            "uniform": false
+          },
+          {
+            "broker_id": "broker_2",
+            "log_dirs": ["/var/kafka-logs-1", "/var/kafka-logs-2"],
+            "mountpoints": ["/dev/sda1", "/dev/sdb1"],
+            "disk_sizes_gb": [500, 575],
+            "median_size_gb": 537.5,
+            "max_deviation_percent": 15.0,
+            "uniform": false
+          }
+        ],
+        "recommendation": "Replace non-uniform disks with identical capacity drives or reconfigure log.dirs to use only uniform-sized mountpoints. Consider using storage management tools to balance existing partitions before disk replacement."
+      }
+    ]
+  }
+  
+  Performance Impact Explanation:
+  - Kafka distributes partitions equally across configured log.dirs regardless of disk size
+  - Smaller disks in JBOD setup will fill up faster, causing uneven resource utilization
+  - When one disk reaches capacity, entire broker performance degrades or fails
+  - Non-uniform configurations make capacity planning and partition balancing extremely complex
+  - Equal disk sizes ensure predictable growth patterns and balanced I/O load
+  - The 10% threshold allows for minor variations while catching significant mismatches
+  - JBOD (Just a Bunch of Disks) requires uniform disk characteristics for optimal operation
+  
+  IMPORTANT: Always include specific numerical values (disk sizes, deviations, mountpoints) for each broker in the description.
+
+include_data:
+  - system
+  - config
+
+severity_keywords:
+  "non-uniform": "critical"
+  "exceeding 10% deviation": "critical"
+  "extremely difficult": "critical"
+  "premature disk exhaustion": "critical"
+  "uneven disk utilization": "critical"
+  "uniform log.dirs": "info"
+  "properly balanced": "info"
+  "optimal partition distribution": "info"
+
+default_severity: critical
+enabled: true
