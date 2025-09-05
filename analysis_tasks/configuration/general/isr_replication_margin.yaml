@@ -1,0 +1,75 @@
+id: isr_replication_margin
+name: ISR vs Replication Factor Margin Check
+description: Ensures replication factor provides adequate margin over min.insync.replicas for high availability
+category: configuration
+
+prompt: |
+  Analyze Kafka cluster replication configuration for high availability margin:
+  
+  Configuration data: {config}
+  Admin/Topic data: {admin}
+  
+  IMPORTANT: Extract the EXACT values from server.properties files and provide specific details.
+  
+  Step 1: Extract Configuration Values
+  1. Find default.replication.factor in server.properties (usually value 3)
+  2. Find min.insync.replicas in server.properties (default is 1 if not set)
+  3. Calculate margin: default.replication.factor - min.insync.replicas
+  
+  Step 2: Risk Assessment
+  Based on the margin calculated:
+  - Margin <= 0: CRITICAL (no broker failure tolerance)
+  - Margin = 1: WARNING (minimal tolerance, only one broker can fail)  
+  - Margin >= 2: INFO (good high availability margin)
+  
+  Step 3: Provide Specific Results
+  Always include the exact values found and explain the implications clearly.
+  
+  If everything is configured properly (margin >= 2), return:
+  {
+    "findings": [
+      {
+        "type": "replication_margin_check",
+        "description": "Replication configuration provides adequate high availability margin: default.replication.factor=X, min.insync.replicas=Y, margin=Z",
+        "severity": "info",
+        "default_replication_factor": X,
+        "default_min_insync_replicas": Y,
+        "margin": Z,
+        "recommendation": "Configuration is optimal for high availability"
+      }
+    ]
+  }
+  
+  If there are issues, provide specific details:
+  {
+    "findings": [
+      {
+        "type": "replication_margin_check", 
+        "description": "CRITICAL/WARNING: Insufficient replication margin detected - default.replication.factor=X, min.insync.replicas=Y, margin=Z. This means only Z broker(s) can fail before writes become unavailable.",
+        "severity": "critical|warning",
+        "default_replication_factor": X,
+        "default_min_insync_replicas": Y,
+        "margin": Z,
+        "recommendation": "Increase default.replication.factor to at least Y+2 for better availability"
+      }
+    ]
+  }
+  
+  IMPORTANT: Always include the specific numerical values found in the description field.
+
+include_data:
+  - config
+  - admin
+
+severity_keywords:
+  "no margin": "critical"
+  "cannot survive": "critical"
+  "unavailable": "critical"
+  "dangerous": "critical"
+  "minimal margin": "warning"
+  "only one broker": "warning"
+  "adequate margin": "info"
+  "high availability": "info"
+
+default_severity: critical
+enabled: true

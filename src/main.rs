@@ -165,7 +165,7 @@ async fn main() -> Result<()> {
                 registry.analyze_all(&snapshot_data).await?
             };
             
-            info!("Analysis complete. Found {} issues", findings.len());
+            info!("Analysis complete. Found {} findings", findings.len());
             
             // Generate report based on format
             match report {
@@ -337,7 +337,22 @@ async fn handle_task_command(action: kafkapilot::cli::commands::TaskCommand) -> 
                 match executor.execute_task(&task, &snapshot_data).await {
                     Ok(findings) => {
                         println!("\n✅ Task completed successfully!");
-                        println!("Found {} issues:\n", findings.len());
+                        
+                        // Count different types of findings for better messaging
+                        let issues_count = findings.iter().filter(|f| matches!(f.severity, 
+                            kafkapilot::snapshot::format::Severity::Critical | 
+                            kafkapilot::snapshot::format::Severity::High | 
+                            kafkapilot::snapshot::format::Severity::Medium)).count();
+                        let findings_count = findings.len() - issues_count;
+                        
+                        match (issues_count, findings_count) {
+                            (0, 0) => println!("No findings reported.\n"),
+                            (0, n) => println!("Found {} finding{}:\n", n, if n == 1 { "" } else { "s" }),
+                            (i, 0) => println!("Found {} issue{}:\n", i, if i == 1 { "" } else { "s" }),
+                            (i, f) => println!("Found {} issue{} and {} finding{}:\n", 
+                                i, if i == 1 { "" } else { "s" },
+                                f, if f == 1 { "" } else { "s" })
+                        }
                         
                         for finding in findings {
                             println!("  {} [{}] {}", 

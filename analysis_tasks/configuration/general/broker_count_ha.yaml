@@ -1,0 +1,56 @@
+id: broker_count_ha
+name: Broker Count High Availability Check
+description: Analyzes cluster broker count for high availability and performance considerations
+category: configuration
+
+prompt: |
+  Analyze the Kafka cluster broker count for high availability concerns:
+  
+  Admin/Cluster data: {admin}
+  Configuration data: {config}
+  
+  Requirements:
+  - Count the total number of active brokers in the cluster (look for broker data in admin data, broker configs, or any broker-related information)
+  - Assess high availability risk based on broker count
+  - Consider performance impact with fewer brokers
+  - Look for broker IDs, broker configurations, or any data indicating active brokers
+  
+  Severity Guidelines:
+  - CRITICAL: Less than 3 brokers (no high availability - single point of failure risk)
+  - WARNING: 3-5 brokers (minimal HA but performance issues if one broker fails)
+  - INFO: 6+ brokers (good HA and performance resilience)
+  
+  Please provide findings as JSON with the following structure:
+  {
+    "findings": [
+      {
+        "type": "broker_count_analysis",
+        "description": "Detailed description of broker count status and implications",
+        "severity": "critical|warning|info",
+        "broker_count": <number>,
+        "recommendation": "Specific recommendation for improving HA/performance"
+      }
+    ]
+  }
+  
+  Focus on:
+  1. Exact broker count from cluster metadata
+  2. High availability implications
+  3. Performance and load distribution concerns
+  4. Actionable recommendations for improvement
+
+include_data:
+  - admin
+  - config
+
+severity_keywords:
+  "critical": "critical"
+  "single point of failure": "critical"
+  "no high availability": "critical"
+  "warning": "warning"
+  "minimal": "warning"
+  "performance issues": "warning"
+  "good": "info"
+
+default_severity: warning
+enabled: true

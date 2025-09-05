@@ -258,8 +258,32 @@ impl AiExecutor {
     
     /// Convert JSON to Finding
     fn json_to_finding(&self, json: &Value, task: &AnalysisTask, index: usize) -> Result<Finding> {
+        // Determine severity first to create appropriate default title
+        let severity = if let Some(sev_str) = json["severity"].as_str() {
+            self.parse_severity(sev_str)
+        } else {
+            let temp_title = json["title"].as_str().unwrap_or(&task.name);
+            let temp_description = json["description"].as_str().unwrap_or("");
+            self.determine_severity(temp_title, temp_description, task)
+        };
+        
+        // Create severity-appropriate default title
+        let default_title = match severity {
+            crate::snapshot::format::Severity::Critical | 
+            crate::snapshot::format::Severity::High | 
+            crate::snapshot::format::Severity::Medium => {
+                format!("{} - Issue {}", task.name, index + 1)
+            },
+            crate::snapshot::format::Severity::Low => {
+                format!("{} - Finding {}", task.name, index + 1)
+            },
+            crate::snapshot::format::Severity::Info => {
+                format!("{} - Report {}", task.name, index + 1)
+            }
+        };
+        
         let title = json["title"].as_str()
-            .unwrap_or(&format!("{} - Issue {}", task.name, index + 1))
+            .unwrap_or(&default_title)
             .to_string();
         
         let description = json["description"].as_str()
@@ -276,12 +300,7 @@ impl AiExecutor {
         let remediation_text = json["remediation"].as_str()
             .unwrap_or("No remediation provided");
         
-        // Determine severity
-        let severity = if let Some(sev_str) = json["severity"].as_str() {
-            self.parse_severity(sev_str)
-        } else {
-            self.determine_severity(&title, &description, task)
-        };
+        // We already calculated severity above for the title
         
         // Parse category
         let category = self.parse_category(&task.category);
