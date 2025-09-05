@@ -1,0 +1,94 @@
+id: separate_listeners
+name: Separate Client and Cluster Listeners Check
+description: Verifies that brokers have separate listeners configured for client and inter-broker communication for optimal performance and security
+category: configuration
+
+prompt: |
+  Analyze Kafka broker listener configuration to ensure proper separation of client and cluster traffic:
+  
+  Configuration data: {config}
+  
+  IMPORTANT: Extract listener configuration from server.properties files for each broker.
+  
+  Step 1: Extract Listener Configuration
+  1. Find listeners parameter in server.properties files
+  2. Find advertised.listeners parameter
+  3. Find inter.broker.listener.name parameter
+  4. Analyze listener names and their separation
+  
+  Step 2: Configuration Analysis
+  Check for proper listener separation:
+  - OPTIMAL: inter.broker.listener.name is set AND advertised.listeners contains separate listener names (e.g., CLIENTS and CLUSTER)
+  - SUBOPTIMAL: inter.broker.listener.name not set OR advertised.listeners uses single listener for both client and broker traffic
+  
+  Examples of configurations:
+  
+  OPTIMAL Configuration:
+  - listeners=CLIENTS://0.0.0.0:9092,CLUSTER://0.0.0.0:9093
+  - advertised.listeners=CLIENTS://broker1:9092,CLUSTER://broker1:9093  
+  - inter.broker.listener.name=CLUSTER
+  
+  SUBOPTIMAL Configuration:
+  - listeners=PLAINTEXT://0.0.0.0:9092
+  - advertised.listeners=PLAINTEXT://broker1:9092
+  - inter.broker.listener.name not set (defaults to first advertised listener)
+  
+  Step 3: Provide Specific Results
+  IMPORTANT: Analyze each broker individually and report per-broker findings.
+  
+  If ALL brokers have optimal listener separation, return:
+  {
+    "findings": [
+      {
+        "type": "separate_listeners_check",
+        "description": "All X brokers have optimal listener configuration with separate client and cluster listeners. Found separate listeners (CLIENTS, CLUSTER) with inter.broker.listener.name properly configured. This ensures optimal performance and security separation.",
+        "severity": "info",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "has_separate_listeners": true, "client_listener": "CLIENTS", "cluster_listener": "CLUSTER", "inter_broker_set": true},
+          {"broker_id": "broker_1", "has_separate_listeners": true, "client_listener": "CLIENTS", "cluster_listener": "CLUSTER", "inter_broker_set": true}
+        ],
+        "recommendation": "Configuration is optimal for performance and security"
+      }
+    ]
+  }
+  
+  If ANY brokers have suboptimal listener configuration, return:
+  {
+    "findings": [
+      {
+        "type": "separate_listeners_check",
+        "description": "WARNING: X out of Y brokers have suboptimal listener configuration without proper client/cluster separation. Brokers with issues: broker_1 (single PLAINTEXT listener), broker_3 (inter.broker.listener.name not set). This creates suboptimal configuration affecting performance and security.",
+        "severity": "warning",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "has_separate_listeners": true, "client_listener": "CLIENTS", "cluster_listener": "CLUSTER", "inter_broker_set": true},
+          {"broker_id": "broker_1", "has_separate_listeners": false, "client_listener": "PLAINTEXT", "cluster_listener": null, "inter_broker_set": false},
+          {"broker_id": "broker_3", "has_separate_listeners": false, "client_listener": "PLAINTEXT", "cluster_listener": null, "inter_broker_set": false}
+        ],
+        "recommendation": "Configure separate listeners for client and inter-broker communication to improve performance and security isolation"
+      }
+    ]
+  }
+  
+  Performance and Security Benefits:
+  - Separate listeners allow different network interfaces for client vs broker traffic
+  - Enables different security protocols (SSL/SASL) for client and broker communication  
+  - Improves network performance by segregating traffic types
+  - Allows better monitoring and traffic control
+  - Enables firewall rules separation between client and internal traffic
+  - Reduces contention on single network interface
+  
+  IMPORTANT: Always include the specific listener names and configuration details for each broker.
+
+include_data:
+  - config
+
+severity_keywords:
+  "suboptimal": "warning"
+  "single.*listener": "warning"
+  "not set": "warning"
+  "optimal.*separation": "info"
+  "separate listeners": "info"
+  "properly configured": "info"
+
+default_severity: warning
+enabled: true
