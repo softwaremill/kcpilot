@@ -1,0 +1,82 @@
+id: jvm_heap_preallocation
+name: JVM Heap Memory Preallocation Check
+description: Verifies that JVM heap memory is preallocated (Xms equals Xmx) for optimal Kafka broker performance
+category: configuration
+
+prompt: |
+  Analyze Kafka broker JVM heap memory configuration for performance optimization:
+  
+  System data: {system}
+  Configuration data: {config}
+  
+  IMPORTANT: Extract the EXACT Xms and Xmx values from Kafka process command lines.
+  
+  Step 1: Extract JVM Heap Settings from Each Broker
+  1. Look for Kafka java processes in ps aux output or kafka_process.txt files for EACH broker
+  2. Find -Xms and -Xmx parameters in each java command line  
+  3. Parse the memory values (e.g., 4G, 2048M, etc.) for each broker individually
+  4. Convert to comparable units if necessary
+  
+  Step 2: Performance Analysis
+  Compare Xms (initial heap) vs Xmx (maximum heap):
+  - If Xms = Xmx: INFO (optimal - heap is preallocated)
+  - If Xms < Xmx: WARNING (suboptimal - JVM will expand heap during runtime, causing performance delays)
+  - If Xms or Xmx not found: WARNING (cannot verify heap preallocation)
+  
+  Step 3: Provide Specific Results
+  IMPORTANT: Analyze each broker individually and report per-broker findings.
+  
+  If ALL brokers have properly preallocated heap (Xms = Xmx), return:
+  {
+    "findings": [
+      {
+        "type": "jvm_heap_preallocation_check",
+        "description": "All X brokers have properly preallocated JVM heap memory (Xms=Xmx=4G). This ensures optimal performance by avoiding heap expansion delays.",
+        "severity": "info",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "xms": "4G", "xmx": "4G", "preallocated": true},
+          {"broker_id": "broker_1", "xms": "4G", "xmx": "4G", "preallocated": true}
+        ],
+        "recommendation": "Configuration is optimal for performance"
+      }
+    ]
+  }
+  
+  If ANY brokers have heap not preallocated (Xms < Xmx), return:
+  {
+    "findings": [
+      {
+        "type": "jvm_heap_preallocation_check",
+        "description": "WARNING: X out of Y brokers have JVM heap memory not properly preallocated. Brokers with issues: broker_1 (Xms=2G, Xmx=4G), broker_3 (Xms=1G, Xmx=4G). This can cause performance degradation when JVM expands heap during runtime.",
+        "severity": "warning",
+        "brokers_analyzed": [
+          {"broker_id": "broker_0", "xms": "4G", "xmx": "4G", "preallocated": true},
+          {"broker_id": "broker_1", "xms": "2G", "xmx": "4G", "preallocated": false},
+          {"broker_id": "broker_3", "xms": "1G", "xmx": "4G", "preallocated": false}
+        ],
+        "recommendation": "Set Xms equal to Xmx for all brokers to preallocate heap memory and improve performance"
+      }
+    ]
+  }
+  
+  Performance Impact Explanation:
+  - When Xms < Xmx, JVM starts with smaller heap and expands during runtime
+  - Heap expansion causes garbage collection pauses and memory allocation delays
+  - Kafka brokers benefit from consistent memory allocation patterns
+  - Preallocation (Xms = Xmx) eliminates expansion overhead
+  
+  IMPORTANT: Always include the specific numerical values found in the description field for each broker.
+
+include_data:
+  - system
+  - config
+
+severity_keywords:
+  "not preallocated": "warning"
+  "performance degradation": "warning"
+  "expansion delays": "warning"
+  "properly preallocated": "info"
+  "optimal performance": "info"
+
+default_severity: warning
+enabled: true
