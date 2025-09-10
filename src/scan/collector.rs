@@ -325,6 +325,36 @@ impl BrokerCollector {
         }
     }
     
+    /// Collect additional Zookeeper-specific data
+    async fn collect_zookeeper_data(&self, broker_dir: &std::path::Path, configs: &mut HashMap<String, String>) -> Result<()> {
+        println!("🔍 Collecting additional Zookeeper-specific data...");
+        
+        // Try to collect Zookeeper connection information
+        if let Ok(zk_info) = self.run_on_broker("echo 'Zookeeper mode detected' | head -1") {
+            fs::write(broker_dir.join("configs").join("zookeeper_mode_detected.txt"), &zk_info)?;
+            configs.insert("zookeeper_mode_detected".to_string(), zk_info);
+        }
+        
+        // Check for Zookeeper-related logs or configurations
+        let zk_related_commands = vec![
+            ("zookeeper_logs", "find /var/log -name '*zookeeper*' 2>/dev/null | head -5"),
+            ("kafka_zk_logs", "find /var/log -name '*kafka*' -exec grep -l 'zookeeper\\|ZooKeeper' {} \\; 2>/dev/null | head -3"),
+        ];
+        
+        for (name, cmd) in zk_related_commands {
+            if let Ok(output) = self.run_on_broker(cmd) {
+                if !output.trim().is_empty() {
+                    fs::write(broker_dir.join("configs").join(format!("{}.txt", name)), &output)?;
+                    configs.insert(name.to_string(), output);
+                    println!("  ✅ Collected {}", name);
+                }
+            }
+        }
+        
+        println!("  ✅ Zookeeper-specific data collection completed");
+        Ok(())
+    }
+    
     /// Execute command on broker through bastion (using agent forwarding)
     fn run_on_broker(&self, command: &str) -> Result<String> {
         let ssh_command = format!(
@@ -714,7 +744,7 @@ impl BrokerCollector {
             if let Ok(enhanced_configs) = enhanced_configs {
                 for (filename, (content, source)) in enhanced_configs {
                     fs::write(broker_dir.join("configs").join(&filename), &content)?;
-                    configs.insert(filename.clone(), content);
+                    configs.insert(filename.clone(), content.clone());
                     configs.insert(format!("{}_source", filename.replace('.', "_")), format!("enhanced:{}", source));
                     
                     match filename.as_str() {
@@ -748,10 +778,11 @@ impl BrokerCollector {
                         if let Ok(content) = self.run_on_broker(&format!("sudo cat '{}' 2>/dev/null", config_path)) {
                             if !content.is_empty() && !content.contains("No such file") {
                                 fs::write(broker_dir.join("configs").join("server.properties"), &content)?;
-                                configs.insert("server.properties".to_string(), content);
+                                configs.insert("server.properties".to_string(), content.clone());
                                 configs.insert("server_properties_source".to_string(), format!("fallback_find:{}", config_path));
                                 server_props_found = true;
                                 println!("✅ Found server.properties via find fallback: {}", config_path);
+                                
                                 break;
                             }
                         }
@@ -774,8 +805,9 @@ impl BrokerCollector {
                 if let Ok(content) = self.run_on_broker(&format!("cat {} 2>/dev/null", path)) {
                     if !content.is_empty() && !content.contains("No such file") {
                         fs::write(broker_dir.join("configs").join("server.properties"), &content)?;
-                        configs.insert("server.properties".to_string(), content);
+                        configs.insert("server.properties".to_string(), content.clone());
                         configs.insert("config_source".to_string(), format!("standard:{}", path));
+                        
                         break;
                     }
                 }
