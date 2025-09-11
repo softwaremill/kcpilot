@@ -1,0 +1,93 @@
+id: zookeeper_heap_preallocation
+name: Zookeeper Heap Memory Preallocation Check
+description: Checks if Zookeeper JVM heap memory is preallocated (Xms equals Xmx) to prevent fragmentation and performance issues
+category: configuration
+
+prompt: |
+  Analyze Zookeeper JVM heap memory configuration to check if memory is properly preallocated.
+
+  Process data from all brokers (processes.txt files only):
+  {system}
+  
+  Step 1: Find Zookeeper Process
+  1. Look for Zookeeper java processes in the process data
+  2. Search for processes containing "zookeeper" or "QuorumPeerMain" in the command line
+  3. Extract -Xms and -Xmx parameters from the java command line
+  4. Parse the memory values (e.g., 4G, 2048M, 512M, etc.)
+  
+  Step 2: Evaluate Memory Preallocation
+  Performance considerations:
+  - When Xms equals Xmx, JVM preallocates all heap memory at startup
+  - This prevents heap fragmentation and resizing overhead during runtime
+  - Eliminates GC pauses caused by heap expansion
+  - Provides predictable memory usage and better performance
+  
+  Step 3: Generate Finding
+  
+  If Xms != Xmx (not equal), return:
+  {
+    "findings": [
+      {
+        "type": "zookeeper_heap_preallocation_check",
+        "description": "WARNING: Zookeeper JVM heap memory is not preallocated. Found Xms=XG and Xmx=YG. Without preallocation, the JVM may experience memory fragmentation and performance degradation due to heap resizing.",
+        "severity": "medium",
+        "current_settings": {
+          "xms": "XG",
+          "xmx": "YG",
+          "preallocated": false
+        },
+        "recommendation": "Set Xms and Xmx to the same value to enable heap preallocation. For example: -Xms2G -Xmx2G. This prevents fragmentation and improves performance."
+      }
+    ]
+  }
+  
+  If Xms == Xmx (equal), return:
+  {
+    "findings": [
+      {
+        "type": "zookeeper_heap_preallocation_check",
+        "description": "Zookeeper JVM heap memory is properly preallocated with Xms=XG and Xmx=XG. This configuration prevents fragmentation and ensures optimal performance.",
+        "severity": "info",
+        "current_settings": {
+          "xms": "XG",
+          "xmx": "XG",
+          "preallocated": true
+        },
+        "recommendation": "Current configuration is optimal. Heap preallocation is enabled."
+      }
+    ]
+  }
+  
+  If no Zookeeper process found, return:
+  {
+    "findings": [
+      {
+        "type": "zookeeper_heap_preallocation_check",
+        "description": "No Zookeeper process found in system processes. This check applies only to deployments running Zookeeper.",
+        "severity": "info",
+        "recommendation": "Not applicable - Zookeeper is not running on this system or may be running in a container/separate host."
+      }
+    ]
+  }
+  
+  IMPORTANT: 
+  - Always include the actual Xms and Xmx values found in the description
+  - Memory values can be in different formats (1G, 1024M, 1073741824) - normalize them for comparison
+  - Focus on whether values are equal, not their absolute size
+
+include_data:
+  - system:processes.txt
+
+severity_keywords:
+  "not preallocated": "medium"
+  "fragmentation": "medium"
+  "performance degradation": "medium"
+  "heap resizing": "medium"
+  "properly preallocated": "info"
+  "optimal": "info"
+  "not found": "info"
+
+default_severity: medium
+enabled: true
+cluster_type_filter:
+  - zookeeper

@@ -183,10 +183,8 @@ impl AiExecutor {
         }
         
         // Add custom collectors
-        debug!("Available custom collectors: {:?}", snapshot.collectors.custom.keys().collect::<Vec<_>>());
         for (name, custom_data) in &snapshot.collectors.custom {
             if should_include(name) {
-                debug!("Processing custom collector: {}", name);
                 // Check if there's a specific file requested (format: "collector:filename")
                 let mut specific_file_requested = false;
                 let mut extracted_data = None;
@@ -195,11 +193,9 @@ impl AiExecutor {
                     if let Some((collector_name, file_name)) = include_item.split_once(':') {
                         if collector_name == name {
                             specific_file_requested = true;
-                            debug!("Specific file requested: {}:{} for collector {}", collector_name, file_name, name);
                             
                             // Special handling for system:processes.txt - aggregate from all brokers
                             if name == "system" && file_name == "processes.txt" {
-                                debug!("Special handling for system:processes.txt");
                                 let mut all_processes = String::new();
                                 
                                 // Look for processes.txt in brokers data
@@ -239,10 +235,7 @@ impl AiExecutor {
                                 }
                                 
                                 if !all_processes.is_empty() {
-                                    debug!("Aggregated processes.txt data: {} bytes", all_processes.len());
                                     extracted_data = Some(all_processes);
-                                } else {
-                                    debug!("No processes.txt files found in brokers or bastion data");
                                 }
                             } else {
                                 // Regular file extraction from collector data
