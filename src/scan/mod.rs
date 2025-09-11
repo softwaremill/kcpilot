@@ -44,6 +44,7 @@ pub struct ScanMetadata {
     pub output_directory: String,
     pub scan_version: String,
     pub accessible_brokers: usize,
+    pub cluster_mode: Option<crate::snapshot::format::ClusterMode>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -812,6 +813,7 @@ impl Scanner {
             output_directory: self.config.output_dir.to_string_lossy().to_string(),
             scan_version: "1.0".to_string(),
             accessible_brokers,
+            cluster_mode: self.detected_cluster_mode.clone(),
         };
         
         let json = serde_json::to_string_pretty(&metadata)?;
@@ -1043,6 +1045,7 @@ impl Scanner {
                 output_directory: self.config.output_dir.to_string_lossy().to_string(),
                 scan_version: "1.0".to_string(),
                 accessible_brokers: accessible_brokers.len(),
+                cluster_mode: self.detected_cluster_mode.clone(),
             },
             cluster_data,
             broker_data,

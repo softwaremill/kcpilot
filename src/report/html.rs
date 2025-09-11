@@ -198,6 +198,13 @@ impl HtmlReporter {
             }
         }
         
+        let mode_display = match &snapshot.cluster.mode {
+            crate::snapshot::format::ClusterMode::Kraft => "KRaft (modern, Zookeeper-free)",
+            crate::snapshot::format::ClusterMode::Zookeeper => "Zookeeper (legacy)",
+            crate::snapshot::format::ClusterMode::Unknown => "Unknown",
+        };
+        html.push_str(&format!("                    <tr><td><strong>Cluster Mode</strong></td><td>{}</td></tr>\n", mode_display));
+        
         html.push_str(&format!("                    <tr><td><strong>Collection Date</strong></td><td>{}</td></tr>\n", 
             snapshot.timestamp));
         html.push_str(&format!("                    <tr><td><strong>Tool Version</strong></td><td>{}</td></tr>\n",

@@ -1,0 +1,74 @@
+id: zookeeper_ha_check
+name: Zookeeper High Availability Configuration Check
+description: Checks if Zookeeper cluster is configured for high availability and avoids split-brain scenarios
+category: configuration
+
+prompt: |
+  Analyze the Kafka broker configuration to check if Zookeeper cluster is properly configured for high availability.
+
+  Configuration data: {config}
+
+  Step 1: Find Zookeeper Configuration
+  1. Look for the `zookeeper.connect` property in server.properties
+  2. Extract the full value of this property
+  3. Split the value by comma to get the list of Zookeeper nodes
+  4. Count the number of Zookeeper nodes
+  
+  Step 2: Evaluate High Availability Configuration
+  Critical issue conditions:
+  - If the number of nodes is even (2, 4, 6, etc.) - this creates split-brain risk
+  - If the number of nodes is less than 3 - insufficient for high availability
+  
+  Expected configuration:
+  - Zookeeper cluster should have an odd number of nodes (3, 5, 7, etc.)
+  - Minimum 3 nodes for high availability
+  - Odd number prevents split-brain scenarios during network partitions
+
+  Step 3: Generate Finding
+  
+  If the configuration has CRITICAL issues (even number of nodes OR less than 3 nodes), return:
+  {
+    "findings": [
+      {
+        "type": "zookeeper_ha_configuration",
+        "description": "CRITICAL: Zookeeper cluster not configured for high availability. Found X nodes in zookeeper.connect: [list nodes]. This configuration has split brain risk (for even numbers) or insufficient nodes for HA (for < 3 nodes).",
+        "severity": "critical",
+        "zookeeper_nodes": ["node1:2181", "node2:2181"],
+        "node_count": X,
+        "issues": ["even number of nodes causes split-brain risk" OR "less than 3 nodes - no high availability"],
+        "recommendation": "Configure Zookeeper cluster with an odd number of nodes (minimum 3, recommended 3 or 5) to ensure high availability and prevent split-brain scenarios"
+      }
+    ]
+  }
+  
+  If the configuration is CORRECT (odd number >= 3), return:
+  {
+    "findings": [
+      {
+        "type": "zookeeper_ha_configuration",
+        "description": "Zookeeper cluster properly configured for high availability with X nodes: [list nodes]. Odd number of nodes prevents split-brain scenarios.",
+        "severity": "info",
+        "zookeeper_nodes": ["node1:2181", "node2:2181", "node3:2181"],
+        "node_count": X,
+        "recommendation": "Configuration is optimal for high availability"
+      }
+    ]
+  }
+  
+  IMPORTANT: Always include the actual node list and count in the description for transparency.
+
+include_data:
+  - config
+
+severity_keywords:
+  "not configured for high availability": "critical"
+  "split brain risk": "critical"
+  "insufficient nodes": "critical"
+  "even number of nodes": "critical"
+  "properly configured": "info"
+  "optimal": "info"
+
+default_severity: critical
+enabled: true
+cluster_type_filter:
+  - zookeeper

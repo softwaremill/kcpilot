@@ -1,0 +1,90 @@
+id: zookeeper_heap_memory
+name: Zookeeper Heap Memory Size Check
+description: Checks if Zookeeper JVM heap memory (Xms/Xmx) is appropriately sized (not exceeding 2GB for typical deployments)
+category: configuration
+
+prompt: |
+  Analyze Zookeeper JVM heap memory configuration to check if it's appropriately sized.
+
+  Process data from all brokers (processes.txt files only):
+  {system}
+  
+  Step 1: Find Zookeeper Process
+  1. Look for Zookeeper java processes in the process data
+  2. Search for processes containing "zookeeper" or "QuorumPeerMain" in the command line
+  3. Extract -Xms and -Xmx parameters from the java command line
+  4. Parse the memory values (e.g., 4G, 2048M, 512M, etc.)
+  
+  Step 2: Evaluate Memory Configuration
+  Performance considerations:
+  - Zookeeper is designed to be lightweight and doesn't benefit from excessive heap memory
+  - For most deployments, 1-2GB heap is sufficient
+  - Heap larger than 2GB can actually degrade performance due to longer GC pauses
+  - Only very large clusters with thousands of znodes might benefit from more memory
+  
+  Step 3: Generate Finding
+  
+  If Zookeeper heap (Xmx) is > 2GB, return:
+  {
+    "findings": [
+      {
+        "type": "zookeeper_heap_memory_check",
+        "description": "WARNING: Zookeeper JVM heap memory is set to XGB (Xms=XG, Xmx=XG), which exceeds the recommended 2GB maximum for typical deployments. Excessive heap memory does not improve Zookeeper performance and can lead to longer GC pauses.",
+        "severity": "medium",
+        "current_settings": {
+          "xms": "XG",
+          "xmx": "XG"
+        },
+        "recommendation": "Unless managing an exceptionally large cluster with thousands of znodes, reduce Zookeeper heap memory to 1-2GB for optimal performance. Set -Xms1G -Xmx2G in Zookeeper JVM options."
+      }
+    ]
+  }
+  
+  If Zookeeper heap is <= 2GB or if Zookeeper process is not found, return:
+  {
+    "findings": [
+      {
+        "type": "zookeeper_heap_memory_check",
+        "description": "Zookeeper JVM heap memory is appropriately sized at XGB (Xms=XG, Xmx=XG). This is within the recommended range for optimal performance.",
+        "severity": "info",
+        "current_settings": {
+          "xms": "XG",
+          "xmx": "XG"
+        },
+        "recommendation": "Current configuration is optimal. Zookeeper performs best with moderate heap sizes."
+      }
+    ]
+  }
+  
+  If no Zookeeper process found, return:
+  {
+    "findings": [
+      {
+        "type": "zookeeper_heap_memory_check",
+        "description": "No Zookeeper process found in system processes. This check applies only to deployments running Zookeeper.",
+        "severity": "info",
+        "recommendation": "Not applicable - Zookeeper is not running on this system or may be running in a container/separate host."
+      }
+    ]
+  }
+  
+  IMPORTANT: 
+  - Always include the actual memory values found in the description
+  - Consider both Xms and Xmx but focus on Xmx for the threshold check
+  - Memory values can be in different formats (1G, 1024M, 1073741824) - normalize them for comparison
+
+include_data:
+  - system:processes.txt
+
+severity_keywords:
+  "exceeds the recommended": "medium"
+  "excessive heap memory": "medium"
+  "longer GC pauses": "medium"
+  "appropriately sized": "info"
+  "optimal": "info"
+  "not found": "info"
+
+default_severity: medium
+enabled: true
+cluster_type_filter:
+  - zookeeper

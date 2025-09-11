@@ -98,7 +98,13 @@ impl MarkdownReporter {
         if let Some(version) = &snapshot.cluster.version {
             md.push_str(&format!("| **Kafka Version** | {} |\n", version));
         }
-        md.push_str(&format!("| **Mode** | {:?} |\n", snapshot.cluster.mode));
+        
+        let mode_display = match &snapshot.cluster.mode {
+            crate::snapshot::format::ClusterMode::Kraft => "KRaft (modern, Zookeeper-free)",
+            crate::snapshot::format::ClusterMode::Zookeeper => "Zookeeper (legacy)",
+            crate::snapshot::format::ClusterMode::Unknown => "Unknown",
+        };
+        md.push_str(&format!("| **Mode** | {} |\n", mode_display));
         if let Some(provider) = &snapshot.cluster.cloud_provider {
             md.push_str(&format!("| **Cloud Provider** | {} |\n", provider));
         }

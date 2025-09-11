@@ -109,7 +109,27 @@ impl AiExecutor {
         
         // Determine what data to include
         let include_all = task.include_data.is_empty();
-        let should_include = |name: &str| include_all || task.include_data.contains(&name.to_string());
+        let should_include = |name: &str| {
+            if include_all {
+                return true;
+            }
+            
+            // Check for exact match first
+            if task.include_data.contains(&name.to_string()) {
+                return true;
+            }
+            
+            // Check for collector:filename format
+            for include_item in &task.include_data {
+                if let Some((collector_name, _)) = include_item.split_once(':') {
+                    if collector_name == name {
+                        return true;
+                    }
+                }
+            }
+            
+            false
+        };
         
         // Add admin data (topics, brokers, etc.)
         if should_include("admin") {
@@ -163,10 +183,90 @@ impl AiExecutor {
         }
         
         // Add custom collectors
+        debug!("Available custom collectors: {:?}", snapshot.collectors.custom.keys().collect::<Vec<_>>());
         for (name, custom_data) in &snapshot.collectors.custom {
             if should_include(name) {
-                data.insert(name.clone(), 
-                           serde_json::to_string_pretty(custom_data)?);
+                debug!("Processing custom collector: {}", name);
+                // Check if there's a specific file requested (format: "collector:filename")
+                let mut specific_file_requested = false;
+                let mut extracted_data = None;
+                
+                for include_item in &task.include_data {
+                    if let Some((collector_name, file_name)) = include_item.split_once(':') {
+                        if collector_name == name {
+                            specific_file_requested = true;
+                            debug!("Specific file requested: {}:{} for collector {}", collector_name, file_name, name);
+                            
+                            // Special handling for system:processes.txt - aggregate from all brokers
+                            if name == "system" && file_name == "processes.txt" {
+                                debug!("Special handling for system:processes.txt");
+                                let mut all_processes = String::new();
+                                
+                                // Look for processes.txt in brokers data
+                                if let Some(brokers_data) = snapshot.collectors.custom.get("brokers") {
+                                    if let Some(brokers_obj) = brokers_data.as_object() {
+                                        for (broker_name, broker_value) in brokers_obj {
+                                            if let Some(broker_obj) = broker_value.as_object() {
+                                                if let Some(system_obj) = broker_obj.get("system") {
+                                                    if let Some(system_map) = system_obj.as_object() {
+                                                        if let Some(processes) = system_map.get("processes.txt") {
+                                                            if let Some(content) = processes.as_str() {
+                                                                all_processes.push_str(&format!("=== Broker {} ===\n", broker_name));
+                                                                all_processes.push_str(content);
+                                                                all_processes.push_str("\n\n");
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                // Also check top-level system directory (bastion)
+                                if let Some(obj) = custom_data.as_object() {
+                                    if let Some(bastion_obj) = obj.get("bastion") {
+                                        if let Some(bastion_map) = bastion_obj.as_object() {
+                                            if let Some(processes) = bastion_map.get("processes.txt") {
+                                                if let Some(content) = processes.as_str() {
+                                                    all_processes.push_str("=== Bastion ===\n");
+                                                    all_processes.push_str(content);
+                                                    all_processes.push_str("\n\n");
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                
+                                if !all_processes.is_empty() {
+                                    debug!("Aggregated processes.txt data: {} bytes", all_processes.len());
+                                    extracted_data = Some(all_processes);
+                                } else {
+                                    debug!("No processes.txt files found in brokers or bastion data");
+                                }
+                            } else {
+                                // Regular file extraction from collector data
+                                if let Some(obj) = custom_data.as_object() {
+                                    if let Some(file_data) = obj.get(file_name) {
+                                        extracted_data = Some(serde_json::to_string_pretty(file_data)?);
+                                    }
+                                }
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                if specific_file_requested {
+                    if let Some(file_content) = extracted_data {
+                        data.insert(name.clone(), file_content);
+                    } else {
+                        data.insert(name.clone(), format!("Requested file not found in {} data", name));
+                    }
+                } else {
+                    data.insert(name.clone(), 
+                               serde_json::to_string_pretty(custom_data)?);
+                }
             }
         }
         

@@ -696,6 +696,7 @@ impl BrokerCollector {
             ("cpu", "cat /proc/cpuinfo | grep -E 'processor|model name' | head -20"),
             ("lscpu", "lscpu 2>/dev/null"),
             ("cpuinfo", "cat /proc/cpuinfo 2>/dev/null"),
+            ("processes", "ps aux"),
         ];
         
         for (name, cmd) in system_commands {

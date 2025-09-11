@@ -64,7 +64,13 @@ impl TerminalReporter {
         if let Some(version) = &snapshot.cluster.version {
             println!("  Kafka Version:   {}", version.bright_cyan());
         }
-        println!("  Mode:            {:?}", snapshot.cluster.mode);
+        
+        let mode_display = match &snapshot.cluster.mode {
+            crate::snapshot::format::ClusterMode::Kraft => "KRaft (modern, Zookeeper-free)".bright_green(),
+            crate::snapshot::format::ClusterMode::Zookeeper => "Zookeeper (legacy)".bright_yellow(),
+            crate::snapshot::format::ClusterMode::Unknown => "Unknown".bright_red(),
+        };
+        println!("  Mode:            {}", mode_display);
         println!("  Timestamp:       {}", snapshot.timestamp.format("%Y-%m-%d %H:%M:%S UTC"));
         println!("  Tool Version:    {}", snapshot.metadata.tool_version);
         
