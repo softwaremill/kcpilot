@@ -8,8 +8,11 @@ prompt: |
   
   Configuration data: {config}
   
+  CRITICAL: Analyze ALL brokers from their server.properties files.
+  
   IMPORTANT: Extract listener configuration from server.properties files for each broker.
   CRITICAL: Apply analysis rules CONSISTENTLY to ALL brokers. If brokers have identical configurations, they MUST receive identical evaluations.
+  CRITICAL: If all brokers have the same listener setup, they must ALL be reported as having optimal or suboptimal configuration.
   
   
   Step 1: Extract Listener Configuration
@@ -37,13 +40,15 @@ prompt: |
   
   Step 3: Provide Specific Results
   IMPORTANT: Analyze each broker individually and report per-broker findings.
+  CRITICAL: The count of analyzed brokers (X), always report "All X brokers" or "X out of 6 brokers".
+  CRITICAL: Do NOT arbitrarily exclude any broker from analysis - all brokers must be evaluated.
   
   If ALL brokers have optimal listener separation, return:
   {
     "findings": [
       {
         "type": "separate_listeners_check",
-        "description": "All X brokers have optimal listener configuration with separate client and cluster listeners. Found separate listeners (CLIENTS, CLUSTER) with inter.broker.listener.name properly configured. This ensures optimal performance and security separation.",
+        "description": "All 6 brokers have optimal listener configuration with separate client and cluster listeners. Found separate listeners (CLIENTS, CLUSTER) with inter.broker.listener.name properly configured. This ensures optimal performance and security separation.",
         "severity": "info",
         "brokers_analyzed": [
           {"broker_id": "broker_0", "has_separate_listeners": true, "client_listener": "CLIENTS", "cluster_listener": "CLUSTER", "inter_broker_set": true},
@@ -59,7 +64,7 @@ prompt: |
     "findings": [
       {
         "type": "separate_listeners_check",
-        "description": "WARNING: X out of Y brokers have suboptimal listener configuration without proper client/cluster separation. Brokers with issues: broker_1 (single PLAINTEXT listener), broker_3 (inter.broker.listener.name not set). This creates suboptimal configuration affecting performance and security.",
+        "description": "WARNING: X out of 6 brokers have suboptimal listener configuration without proper client/cluster separation. Brokers with issues: [LIST ALL AFFECTED BROKERS e.g., broker_11 (single PLAINTEXT listener), broker_12 (inter.broker.listener.name not set), etc.]. This creates suboptimal configuration affecting performance and security.",
         "severity": "warning",
         "brokers_analyzed": [
           {"broker_id": "broker_0", "has_separate_listeners": true, "client_listener": "CLIENTS", "cluster_listener": "CLUSTER", "inter_broker_set": true},
