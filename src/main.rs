@@ -567,9 +567,23 @@ fn load_snapshot_from_directory(path: &PathBuf) -> Result<Snapshot> {
     let metadata_path = path.join("scan_metadata.json");
     if metadata_path.exists() {
         if let Ok(content) = fs::read_to_string(&metadata_path) {
-            if let Ok(_metadata) = serde_json::from_str::<serde_json::Value>(&content) {
+            if let Ok(metadata) = serde_json::from_str::<serde_json::Value>(&content) {
                 info!("✓ Found scan metadata");
-                // You could update snapshot metadata here if needed
+                
+                // Extract cluster mode from scan metadata
+                if let Some(cluster_mode_str) = metadata.get("cluster_mode").and_then(|v| v.as_str()) {
+                    snapshot.cluster.mode = match cluster_mode_str {
+                        "kraft" => kafkapilot::snapshot::format::ClusterMode::Kraft,
+                        "zookeeper" => kafkapilot::snapshot::format::ClusterMode::Zookeeper,
+                        _ => kafkapilot::snapshot::format::ClusterMode::Unknown,
+                    };
+                    info!("  • Cluster mode: {}", cluster_mode_str);
+                }
+                
+                // Extract other useful metadata
+                if let Some(broker_count) = metadata.get("broker_count").and_then(|v| v.as_u64()) {
+                    info!("  • Broker count: {}", broker_count);
+                }
             }
         }
     }
