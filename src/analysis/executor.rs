@@ -39,8 +39,14 @@ impl AiExecutor {
         
         let mut all_findings = Vec::new();
         
-        // Execute each task
+        // Execute each task (with cluster type filtering)
         for task in tasks {
+            // Check if task is compatible with current cluster type
+            if !self.is_task_compatible(&task, snapshot) {
+                debug!("Skipping task '{}' - not compatible with cluster type {:?}", task.name, snapshot.cluster.mode);
+                continue;
+            }
+            
             info!("Running task: {}", task.name);
             
             match self.execute_task(&task, snapshot).await {
@@ -295,6 +301,24 @@ impl AiExecutor {
         } else {
             Ok(serde_json::to_string_pretty(logs_data)?)
         }
+    }
+    
+    /// Check if task is compatible with current cluster type
+    fn is_task_compatible(&self, task: &AnalysisTask, snapshot: &Snapshot) -> bool {
+        // If no cluster type filter specified, task runs on all cluster types
+        if task.cluster_type_filter.is_empty() {
+            return true;
+        }
+        
+        // Convert cluster mode to string for comparison
+        let cluster_mode_str = match snapshot.cluster.mode {
+            crate::snapshot::format::ClusterMode::Kraft => "kraft",
+            crate::snapshot::format::ClusterMode::Zookeeper => "zookeeper", 
+            crate::snapshot::format::ClusterMode::Unknown => "unknown",
+        };
+        
+        // Check if current cluster mode is in the task's filter list
+        task.cluster_type_filter.contains(&cluster_mode_str.to_string())
     }
     
     /// Parse LLM response into findings

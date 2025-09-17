@@ -1,0 +1,94 @@
+id: kraft_controller_ha_check
+name: KRaft Controller Quorum High Availability Check
+description: Checks if KRaft controller quorum is configured for high availability and avoids split-brain scenarios
+category: configuration
+
+prompt: |
+  Analyze the Kafka broker configuration to check if KRaft controller quorum is properly configured for high availability.
+
+  Configuration data: {config}
+  
+  Step 1: Find KRaft Controller Configuration
+  1. Look for the `process.roles` property in server.properties
+  2. Verify it contains "controller" (either alone or as "controller,broker")
+  3. Find the `controller.quorum.voters` property
+  4. Split the value by comma to get the list of controller voters
+  5. Count the number of controller voters (starting from 1)
+  
+  Step 2: Evaluate High Availability Configuration
+  Critical issue conditions:
+  - If the number of controller voters is even (2, 4, 6, etc.) - this creates split-brain risk
+  - If the number of controller voters is less than 3 - insufficient for high availability
+  
+  Expected configuration:
+  - Controller quorum should have an odd number of voters (3, 5, 7, etc.)
+  - Minimum 3 voters for high availability
+  - Odd number prevents split-brain scenarios during network partitions
+  - This applies to both dedicated controllers and combined controller/broker nodes
+
+  Step 3: Generate Finding
+  
+  If controller.quorum.voters has CRITICAL issues (even number of voters OR less than 3 voters), return:
+  {
+    "findings": [
+      {
+        "type": "kraft_controller_ha_configuration",
+        "description": "CRITICAL: KRaft controller quorum not configured for high availability. Found X controller voters in controller.quorum.voters: [list voters]. This configuration has split brain risk (for even numbers) or insufficient nodes for HA (for < 3 voters).",
+        "severity": "critical",
+        "controller_voters": ["1@kafka1:9093", "2@kafka2:9093"],
+        "voter_count": X,
+        "process_roles": "controller,broker",
+        "issues": ["even number of voters causes split-brain risk" OR "less than 3 voters - no high availability"],
+        "recommendation": "Configure KRaft controller quorum with an odd number of voters (minimum 3, recommended 3 or 5) to ensure high availability and prevent split-brain scenarios. Update controller.quorum.voters property."
+      }
+    ]
+  }
+  
+  If configuration is CORRECT (odd number >= 3), return:
+  {
+    "findings": [
+      {
+        "type": "kraft_controller_ha_configuration",
+        "description": "KRaft controller quorum properly configured for high availability with X voters: [list voters]. Odd number of voters prevents split-brain scenarios.",
+        "severity": "info",
+        "controller_voters": ["1@kafka1:9093", "2@kafka2:9093", "3@kafka3:9093"],
+        "voter_count": X,
+        "process_roles": "controller,broker",
+        "recommendation": "Configuration is optimal for high availability"
+      }
+    ]
+  }
+  
+  If not a KRaft cluster (no process.roles with controller), return:
+  {
+    "findings": [
+      {
+        "type": "kraft_controller_ha_configuration",
+        "description": "This is not a KRaft cluster. No process.roles with controller found in configuration.",
+        "severity": "info",
+        "recommendation": "Not applicable - this check only applies to KRaft mode clusters"
+      }
+    ]
+  }
+  
+  IMPORTANT: 
+  - Always include the actual voter list and count in the description for transparency
+  - Check both "controller" and "controller,broker" in process.roles
+  - Parse controller.quorum.voters format: "id@host:port,id@host:port,..."
+
+include_data:
+  - config
+
+severity_keywords:
+  "not configured for high availability": "critical"
+  "split brain risk": "critical"
+  "insufficient nodes": "critical"
+  "even number of voters": "critical"
+  "properly configured": "info"
+  "optimal": "info"
+  "not a KRaft cluster": "info"
+
+default_severity: critical
+enabled: true
+cluster_type_filter:
+  - kraft

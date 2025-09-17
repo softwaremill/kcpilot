@@ -44,6 +44,10 @@ pub struct AnalysisTask {
     /// Optional examples to help the AI understand the expected output
     #[serde(default)]
     pub examples: Option<String>,
+    
+    /// Optional cluster type filter (kraft, zookeeper, or both if not specified)
+    #[serde(default)]
+    pub cluster_type_filter: Vec<String>,
 }
 
 fn default_severity() -> String {

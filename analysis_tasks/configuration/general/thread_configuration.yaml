@@ -16,10 +16,16 @@ prompt: |
   2. Find num.io.threads parameter in server.properties (default: 8)
   3. Find num.replica.fetchers parameter in server.properties (default: 1)
   4. Estimate partitions per broker from topic data if available
-  5. Detect storage type (HDD/SSD/NVMe) from system info if available
+  5. Detect storage type from system info:
+     - Look for NVMe devices in lscpu/disk output (contains "nvme")
+     - Look for SSD indicators (SSD in device names, or fast storage patterns)
+     - Default to "unknown" if storage type cannot be determined from available system information
+     - Be consistent: if storage detection fails for any broker, it should fail the same way for all identical systems
   
   Step 2: Thread Configuration Analysis
-  For each broker, validate thread settings against these rules:
+  For each broker, validate thread settings against these rules.
+  
+  IMPORTANT: Ensure consistent analysis - brokers with identical configurations should receive identical evaluations.
   
   Network Threads (num.network.threads):
   - If == 1: WARNING (insufficient for production load)
@@ -28,10 +34,11 @@ prompt: |
   
   I/O Threads (num.io.threads):
   - If < 2: WARNING (insufficient I/O parallelism)
-  - If > 6 with HDD storage: WARNING (excessive for mechanical disks)
-  - If > 12 with SSD storage: WARNING (excessive for solid state disks)
-  - If > 32 with NVMe storage: WARNING (excessive even for high-performance storage)
-  - Optimal ranges: HDD: 2-6, SSD: 2-12, NVMe: 2-32
+  - If storage type detected as HDD and > 6: WARNING (excessive for mechanical disks)
+  - If storage type detected as SSD and > 12: WARNING (excessive for solid state disks)
+  - If storage type detected as NVMe and > 32: WARNING (excessive even for high-performance storage)
+  - If storage type unknown and > 8: WARNING (conservative limit when storage characteristics unknown)
+  - Optimal ranges: HDD: 2-6, SSD: 2-12, NVMe: 2-32, Unknown: 2-8
   
   Replica Fetchers (num.replica.fetchers):
   - Calculate recommended: 1 + int(partitions_per_broker / 500)
@@ -72,7 +79,7 @@ prompt: |
     "findings": [
       {
         "type": "thread_configuration_check",
-        "description": "WARNING: X out of Y brokers have suboptimal thread configurations that may cause performance issues or broker failures. Issues detected: broker_1 (network threads=1, insufficient for production), broker_2 (I/O threads=15 with SSD, excessive causing context switching), broker_3 (replica fetchers=8 for 800 partitions, recommended=2). Improper thread configuration can lead to request timeouts, reduced throughput, increased latency, and in extreme cases broker instability.",
+        "description": "WARNING: X out of Y brokers have suboptimal thread configurations that may cause performance issues or broker failures. Issues detected: broker_1 (network threads=1, insufficient for production), broker_2 (I/O threads=15 with SSD storage, excessive causing context switching), broker_3 (I/O threads=12 with unknown storage, exceeds conservative limit). Improper thread configuration can lead to request timeouts, reduced throughput, increased latency, and in extreme cases broker instability.",
         "severity": "warning",
         "brokers_analyzed": [
           {
