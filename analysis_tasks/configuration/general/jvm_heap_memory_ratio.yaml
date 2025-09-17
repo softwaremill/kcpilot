@@ -10,6 +10,8 @@ prompt: |
   Configuration data: {config}
   
   IMPORTANT: Extract EXACT Xmx values and total system memory for each broker.
+  CRITICAL: Apply analysis rules CONSISTENTLY to ALL brokers. If brokers have identical configurations, they MUST receive identical evaluations.
+  
   
   Step 1: Extract Data from Each Broker
   1. Find Xmx parameter from Kafka java processes (ps aux output or kafka_process.txt files)

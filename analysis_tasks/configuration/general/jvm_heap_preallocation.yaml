@@ -10,6 +10,8 @@ prompt: |
   Configuration data: {config}
   
   IMPORTANT: Extract the EXACT Xms and Xmx values from Kafka process command lines.
+  CRITICAL: Apply analysis rules CONSISTENTLY to ALL brokers. If brokers have identical configurations, they MUST receive identical evaluations.
+  
   
   Step 1: Extract JVM Heap Settings from Each Broker
   1. Look for Kafka java processes in ps aux output or kafka_process.txt files for EACH broker

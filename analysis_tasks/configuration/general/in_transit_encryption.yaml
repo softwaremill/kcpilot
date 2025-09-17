@@ -9,6 +9,8 @@ prompt: |
   Configuration data: {config}
   
   IMPORTANT: Extract encryption-related configuration from server.properties files for each broker.
+  CRITICAL: Apply analysis rules CONSISTENTLY to ALL brokers. If brokers have identical configurations, they MUST receive identical evaluations.
+  
   
   Step 1: Extract Encryption Configuration
   1. Find listener.security.protocol.map parameter in server.properties files

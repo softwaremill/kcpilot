@@ -10,6 +10,8 @@ prompt: |
   System data: {system}
   
   IMPORTANT: Extract the EXACT log.dirs value from each broker's server.properties file.
+  CRITICAL: Apply analysis rules CONSISTENTLY to ALL brokers. If brokers have identical configurations, they MUST receive identical evaluations.
+  
   
   Step 1: Extract Log Directories Configuration
   1. Find log.dirs parameter in server.properties files for each broker

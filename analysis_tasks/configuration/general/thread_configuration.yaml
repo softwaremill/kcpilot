@@ -9,6 +9,8 @@ prompt: |
   Configuration data: {config}
   Cluster data: {admin}
   
+  CRITICAL: Apply analysis rules CONSISTENTLY to ALL brokers. If brokers have identical configurations, they MUST receive identical evaluations.
+  
   IMPORTANT: Extract thread configuration parameters and partition counts from each broker.
   
   Step 1: Extract Data from Each Broker
@@ -25,7 +27,10 @@ prompt: |
   Step 2: Thread Configuration Analysis
   For each broker, validate thread settings against these rules.
   
-  IMPORTANT: Ensure consistent analysis - brokers with identical configurations should receive identical evaluations.
+  CRITICAL CONSISTENCY REQUIREMENT: Brokers with identical configurations MUST receive identical evaluations.
+  - If all brokers have the same thread counts and storage type, they must ALL pass or ALL fail the same checks
+  - Do not arbitrarily exclude any broker from warnings if it has the same configuration as others
+  - Storage type detection must be consistent across all brokers with similar hardware
   
   Network Threads (num.network.threads):
   - If == 1: WARNING (insufficient for production load)
@@ -40,6 +45,8 @@ prompt: |
   - If storage type unknown and > 8: WARNING (conservative limit when storage characteristics unknown)
   - Optimal ranges: HDD: 2-6, SSD: 2-12, NVMe: 2-32, Unknown: 2-8
   
+  IMPORTANT: If storage type is "unknown" and I/O threads > 8, ALL brokers with this configuration MUST be flagged as having excessive I/O threads.
+  
   Replica Fetchers (num.replica.fetchers):
   - Calculate recommended: 1 + int(partitions_per_broker / 500)
   - If > recommended: WARNING (excessive replica fetcher threads)
@@ -47,6 +54,7 @@ prompt: |
   
   Step 3: Provide Specific Results
   IMPORTANT: Analyze each broker individually and report per-broker findings.
+  CRITICAL: The count of affected brokers (X) MUST exactly match the number of brokers you list with issues. If 6 brokers have the same issue, you must say "6 out of 6" and list all 6 brokers.
   
   If ALL brokers have optimal thread configurations, return:
   {
@@ -79,7 +87,7 @@ prompt: |
     "findings": [
       {
         "type": "thread_configuration_check",
-        "description": "WARNING: X out of Y brokers have suboptimal thread configurations that may cause performance issues or broker failures. Issues detected: broker_1 (network threads=1, insufficient for production), broker_2 (I/O threads=15 with SSD storage, excessive causing context switching), broker_3 (I/O threads=12 with unknown storage, exceeds conservative limit). Improper thread configuration can lead to request timeouts, reduced throughput, increased latency, and in extreme cases broker instability.",
+        "description": "WARNING: X out of Y brokers have suboptimal thread configurations that may cause performance issues or broker failures. Issues detected: [IMPORTANT: LIST EVERY SINGLE AFFECTED BROKER WITH ITS SPECIFIC ISSUE, e.g., broker_11 (I/O threads=12 with unknown storage, exceeds conservative limit), broker_12 (I/O threads=12 with unknown storage, exceeds conservative limit), etc.]. Improper thread configuration can lead to request timeouts, reduced throughput, increased latency, and in extreme cases broker instability.",
         "severity": "warning",
         "brokers_analyzed": [
           {

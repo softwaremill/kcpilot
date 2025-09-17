@@ -8,12 +8,22 @@ prompt: |
   
   System data: {system}
   
+  CRITICAL: You MUST analyze BROKER system data, NOT bastion host data.
+  - The system data includes information from brokers/broker_*/system/ directories
+  - Each broker (broker_11, broker_12, broker_13, broker_14, broker_15, broker_16) has its own lscpu.txt file
+  - Look for paths like "brokers/broker_11/system/lscpu.txt" in the provided data
+  - DO NOT analyze system/bastion/ data - that's for the SSH bastion, not Kafka brokers
+  - Identify brokers by their directory names: broker_11, broker_12, broker_13, broker_14, broker_15, broker_16
+  
   IMPORTANT: Extract CPU core count from system information for each broker.
+  CRITICAL: Apply analysis rules CONSISTENTLY to ALL brokers. If brokers have identical configurations, they MUST receive identical evaluations.
+  
   
   Step 1: Extract Data from Each Broker
-  1. Find CPU core count from lscpu output, /proc/cpuinfo, or similar system information
+  1. Find CPU core count from each broker's lscpu output, /proc/cpuinfo, or similar system information
   2. Look for "CPU(s)" field in lscpu or count processor entries in /proc/cpuinfo
-  3. Extract total number of available CPU cores (logical processors)
+  3. Extract total number of available CPU cores (logical processors) for EACH broker separately
+  4. Ensure you're analyzing broker_11, broker_12, broker_13, etc., NOT the bastion host
   
   Step 2: CPU Core Analysis
   For each broker, check if CPU core count >= 4:
@@ -24,6 +34,9 @@ prompt: |
   
   Step 3: Provide Specific Results
   IMPORTANT: Analyze each broker individually and report per-broker findings.
+  CRITICAL: The count of affected brokers (X) MUST exactly match the number of broker instances you list with issues.
+  - If all 6 brokers have <4 cores, report "6 out of 6 brokers" and list ALL 6 brokers
+  - Do NOT report bastion host statistics as broker statistics
   
   If ALL brokers have adequate CPU cores (>=4), return:
   {
@@ -46,7 +59,7 @@ prompt: |
     "findings": [
       {
         "type": "minimum_cpu_cores_check",
-        "description": "WARNING: X out of Y brokers have insufficient CPU core count below minimum requirement of 4 cores. Affected brokers: broker_1 (2 cores), broker_3 (1 core). This is an inadequate configuration that may severely impact Kafka performance, especially under moderate to high load conditions.",
+        "description": "WARNING: X out of Y brokers have insufficient CPU core count below minimum requirement of 4 cores. Affected brokers: [LIST ALL AFFECTED BROKERS e.g., broker_11 (2 cores), broker_12 (2 cores), broker_13 (2 cores), etc.]. This is an inadequate configuration that may severely impact Kafka performance, especially under moderate to high load conditions.",
         "severity": "warning",
         "brokers_analyzed": [
           {"broker_id": "broker_0", "cpu_cores": 8, "meets_minimum": true},

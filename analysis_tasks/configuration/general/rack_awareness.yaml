@@ -9,6 +9,8 @@ prompt: |
   Configuration data: {config}
   
   IMPORTANT: Extract broker.rack parameter from server.properties for each broker.
+  CRITICAL: Apply analysis rules CONSISTENTLY to ALL brokers. If brokers have identical configurations, they MUST receive identical evaluations.
+  
   
   Step 1: Extract Data from Each Broker
   1. Find broker.rack parameter in server.properties configuration files

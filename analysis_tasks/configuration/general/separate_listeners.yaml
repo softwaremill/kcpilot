@@ -9,6 +9,8 @@ prompt: |
   Configuration data: {config}
   
   IMPORTANT: Extract listener configuration from server.properties files for each broker.
+  CRITICAL: Apply analysis rules CONSISTENTLY to ALL brokers. If brokers have identical configurations, they MUST receive identical evaluations.
+  
   
   Step 1: Extract Listener Configuration
   1. Find listeners parameter in server.properties files

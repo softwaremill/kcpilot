@@ -10,6 +10,8 @@ prompt: |
   Admin/Topic data: {admin}
   
   IMPORTANT: Extract the EXACT values from server.properties files and provide specific details.
+  CRITICAL: Apply analysis rules CONSISTENTLY to ALL brokers. If brokers have identical configurations, they MUST receive identical evaluations.
+  
   
   Step 1: Extract Configuration Values
   1. Find default.replication.factor in server.properties (usually value 3)

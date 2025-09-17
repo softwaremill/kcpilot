@@ -9,6 +9,8 @@ prompt: |
   System data: {system}
   
   IMPORTANT: Extract iowait values and CPU core count for each broker.
+  CRITICAL: Apply analysis rules CONSISTENTLY to ALL brokers. If brokers have identical configurations, they MUST receive identical evaluations.
+  
   
   Step 1: Extract Data from Each Broker
   1. Find iowait percentage from system monitoring data (look for CPU statistics, iostat, top output, or similar)
