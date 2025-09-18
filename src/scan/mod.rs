@@ -1,6 +1,5 @@
 use anyhow::{Context, Result};
 use chrono::Utc;
-use serde::{Deserialize, Serialize};
 use serde_json;
 use std::collections::HashMap;
 use std::fs;
@@ -13,74 +12,22 @@ use collector::DiscoveryMethod;
 pub mod collector;
 pub mod log_discovery;
 pub mod enhanced_log_discovery;
+pub mod types;
+pub mod utils;
 #[cfg(test)]
 mod test_log_discovery;
+
+// Re-export types for convenience
+pub use types::{
+    ScanConfig, BrokerInfo, ScanMetadata, ScanResult, 
+    ClusterData, BrokerData, CollectionStats
+};
+pub use utils::infer_datacenter;
 
 use collector::{BastionCollector, BrokerCollector};
 use crate::collectors::admin::AdminCollector;
 use crate::collectors::{KafkaConfig, Collector};
-// Import log_discovery types when needed
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ScanConfig {
-    pub bastion_alias: Option<String>,  // None means running locally on bastion
-    pub output_dir: PathBuf,
-    pub brokers: Vec<BrokerInfo>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BrokerInfo {
-    pub id: i32,
-    pub hostname: String,
-    pub datacenter: String,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ScanMetadata {
-    pub scan_timestamp: String,
-    pub bastion: Option<String>,
-    pub is_local: bool,
-    pub broker_count: usize,
-    pub output_directory: String,
-    pub scan_version: String,
-    pub accessible_brokers: usize,
-    pub cluster_mode: Option<crate::snapshot::format::ClusterMode>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ScanResult {
-    pub metadata: ScanMetadata,
-    pub cluster_data: ClusterData,
-    pub broker_data: Vec<BrokerData>,
-    pub collection_stats: CollectionStats,
-    pub detected_cluster_mode: Option<crate::snapshot::format::ClusterMode>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ClusterData {
-    pub kafkactl_data: HashMap<String, String>,
-    pub metrics: Option<String>,
-    pub bastion_info: HashMap<String, String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BrokerData {
-    pub broker_id: i32,
-    pub hostname: String,
-    pub datacenter: String,
-    pub accessible: bool,
-    pub system_info: HashMap<String, String>,
-    pub configs: HashMap<String, String>,
-    pub logs: HashMap<String, String>,
-    pub data_dirs: Vec<String>,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CollectionStats {
-    pub total_files: usize,
-    pub total_size_bytes: u64,
-    pub duration_secs: u64,
-}
 
 pub struct Scanner {
     pub config: ScanConfig,
@@ -88,15 +35,6 @@ pub struct Scanner {
     detected_cluster_mode: Option<crate::snapshot::format::ClusterMode>,
 }
 
-/// Helper function to infer datacenter from hostname
-fn infer_datacenter(hostname: &str) -> String {
-    match () {
-        _ if hostname.contains("-dc1-") => "dc1",
-        _ if hostname.contains("-dc2-") => "dc2",
-        _ if hostname.contains("-dc3-") => "dc3",
-        _ => "unknown",
-    }.to_string()
-}
 
 impl Scanner {
     /// Detect cluster mode from server.properties content

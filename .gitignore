@@ -4,3 +4,6 @@ test-local-scan
 kafka_report_*
 .DS_Store
 llmdbg.txt
+test-scan
+*.iml
+.idea
