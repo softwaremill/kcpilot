@@ -1,5 +1,6 @@
 use anyhow::Result;
-use crate::scan::Scanner;
+use crate::scan::{Scanner, types::BrokerInfo};
+use crate::scan::bastion::{run_ssh_diagnostics, test_broker_access};
 
 pub async fn handle_ssh_test_command(bastion: Option<String>) -> Result<()> {
     println!("🔍 KafkaPilot SSH Connectivity Test");
@@ -11,7 +12,20 @@ pub async fn handle_ssh_test_command(bastion: Option<String>) -> Result<()> {
         Some(alias) => {
             println!("Mode: Remote via bastion '{}'", alias);
             println!("\n🔍 Running SSH diagnostics...");
-            scanner.run_ssh_diagnostics(alias).await;
+            
+            // For SSH diagnostics, we need a sample broker - use a dummy one if no brokers configured
+            let sample_broker = if !scanner.config.brokers.is_empty() {
+                &scanner.config.brokers[0]
+            } else {
+                // Create a dummy broker for diagnostic purposes
+                &BrokerInfo {
+                    id: 0,
+                    hostname: "localhost".to_string(),
+                    datacenter: "unknown".to_string(),
+                }
+            };
+            
+            run_ssh_diagnostics(alias, sample_broker).await;
         }
         None => {
             println!("Mode: Local/direct connections");
@@ -24,7 +38,7 @@ pub async fn handle_ssh_test_command(bastion: Option<String>) -> Result<()> {
 
     for broker in &scanner.config.brokers {
         print!("• {} ({}): ", broker.hostname, broker.datacenter);
-        let accessible = scanner.test_broker_access(broker).await;
+        let accessible = test_broker_access(scanner.config.bastion_alias.as_ref(), broker).await;
         if accessible {
             println!("✅ Connected");
         } else {
