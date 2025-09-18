@@ -66,7 +66,7 @@ pub struct ClusterSnapshot {
     pub region: Option<String>,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub enum ClusterMode {
     #[serde(rename = "kraft")]
     Kraft,

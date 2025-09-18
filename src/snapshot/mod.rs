@@ -34,6 +34,37 @@ pub struct SnapshotManager {
     compress: bool,
 }
 
+/// Validate archive path to prevent directory traversal attacks
+fn validate_archive_path(name: &str) -> SnapshotResult<()> {
+    // Reject paths containing directory traversal sequences
+    if name.contains("..") {
+        return Err(SnapshotError::InvalidFormat);
+    }
+    
+    // Reject absolute paths
+    if name.starts_with('/') || name.starts_with('\\') {
+        return Err(SnapshotError::InvalidFormat);
+    }
+    
+    // Reject Windows drive letters
+    if name.len() >= 2 && name.chars().nth(1) == Some(':') {
+        return Err(SnapshotError::InvalidFormat);
+    }
+    
+    // Ensure the path is not empty
+    if name.trim().is_empty() {
+        return Err(SnapshotError::InvalidFormat);
+    }
+    
+    Ok(())
+}
+
+impl Default for SnapshotManager {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SnapshotManager {
     pub fn new() -> Self {
         Self { compress: true }
@@ -132,6 +163,9 @@ impl SnapshotManager {
         
         // Add reports
         for (name, data) in reports {
+            // Validate path to prevent directory traversal attacks
+            validate_archive_path(&name)?;
+            
             let mut header = tar::Header::new_gnu();
             header.set_path(&name)?;
             header.set_size(data.len() as u64);
@@ -149,14 +183,39 @@ impl SnapshotManager {
     /// Extract a snapshot archive
     pub fn extract_archive(&self, path: &Path, output_dir: &Path) -> SnapshotResult<Snapshot> {
         use tar::Archive;
+        use std::io::copy;
         
         info!("Extracting snapshot archive from {:?}", path);
         
         let file = File::open(path)?;
         let mut archive = Archive::new(file);
         
-        // Extract all files
-        archive.unpack(output_dir)?;
+        // Safely extract files with path validation
+        for entry in archive.entries()? {
+            let mut entry = entry?;
+            let entry_path = entry.path()?;
+            
+            // Convert to string for validation
+            let path_str = entry_path.to_string_lossy();
+            validate_archive_path(&path_str)?;
+            
+            // Construct safe output path
+            let safe_path = output_dir.join(&*entry_path);
+            
+            // Ensure the path is still within output_dir after join
+            if !safe_path.starts_with(output_dir) {
+                return Err(SnapshotError::InvalidFormat);
+            }
+            
+            // Create parent directories if needed
+            if let Some(parent) = safe_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            
+            // Extract the file
+            let mut output_file = File::create(&safe_path)?;
+            copy(&mut entry, &mut output_file)?;
+        }
         
         // Load the snapshot
         let snapshot_path = output_dir.join("snapshot.json");

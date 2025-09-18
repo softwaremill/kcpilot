@@ -41,6 +41,12 @@ pub struct AnalyzerRegistry {
     analyzers: Vec<Box<dyn Analyzer>>,
 }
 
+impl Default for AnalyzerRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl AnalyzerRegistry {
     pub fn new() -> Self {
         Self {

@@ -65,7 +65,7 @@ impl BastionCollector {
             return Err(anyhow::anyhow!("Command failed: {}", stderr));
         }
         
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
     }
 
     /// Check if kafkactl is available on the bastion
@@ -353,7 +353,7 @@ impl BrokerCollector {
             }
         };
         
-        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+        Ok(String::from_utf8_lossy(&output.stdout).into_owned())
     }
 
     /// Enhanced config discovery - parse process arguments to get actual runtime config files

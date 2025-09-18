@@ -7,6 +7,7 @@ use crate::snapshot::format::{
 use anyhow::Result;
 use serde_json::{json, Value};
 use std::collections::HashMap;
+use std::fmt::Write;
 use tracing::{debug, info, warn};
 
 pub struct AiExecutor {
@@ -202,7 +203,7 @@ impl AiExecutor {
                             
                             // Special handling for system:processes.txt - aggregate from all brokers
                             if name == "system" && file_name == "processes.txt" {
-                                let mut all_processes = String::new();
+                                let mut all_processes = String::with_capacity(8192);
                                 
                                 // Look for processes.txt in brokers data
                                 if let Some(brokers_data) = snapshot.collectors.custom.get("brokers") {
@@ -213,9 +214,9 @@ impl AiExecutor {
                                                     if let Some(system_map) = system_obj.as_object() {
                                                         if let Some(processes) = system_map.get("processes.txt") {
                                                             if let Some(content) = processes.as_str() {
-                                                                all_processes.push_str(&format!("=== Broker {} ===\n", broker_name));
+                                                                writeln!(all_processes, "=== Broker {} ===", broker_name).unwrap();
                                                                 all_processes.push_str(content);
-                                                                all_processes.push_str("\n\n");
+                                                                writeln!(all_processes).unwrap();
                                                             }
                                                         }
                                                     }
@@ -231,9 +232,9 @@ impl AiExecutor {
                                         if let Some(bastion_map) = bastion_obj.as_object() {
                                             if let Some(processes) = bastion_map.get("processes.txt") {
                                                 if let Some(content) = processes.as_str() {
-                                                    all_processes.push_str("=== Bastion ===\n");
+                                                    writeln!(all_processes, "=== Bastion ===").unwrap();
                                                     all_processes.push_str(content);
-                                                    all_processes.push_str("\n\n");
+                                                    writeln!(all_processes).unwrap();
                                                 }
                                             }
                                         }
@@ -275,19 +276,19 @@ impl AiExecutor {
     /// Extract log content from log data
     fn extract_logs(&self, logs_data: &Value) -> Result<String> {
         if let Some(logs_obj) = logs_data.as_object() {
-            let mut all_logs = String::new();
+            let mut all_logs = String::with_capacity(4096);
             
             // If it has a summary field, include that
             if let Some(summary) = logs_obj.get("summary") {
-                all_logs.push_str("=== LOG SUMMARY ===\n");
+                writeln!(all_logs, "=== LOG SUMMARY ===").unwrap();
                 all_logs.push_str(&serde_json::to_string_pretty(summary)?);
-                all_logs.push_str("\n\n");
+                writeln!(all_logs).unwrap();
             }
             
             // If it has raw logs, include those
             if let Some(raw) = logs_obj.get("raw_logs") {
                 if let Some(raw_str) = raw.as_str() {
-                    all_logs.push_str("=== RAW LOGS ===\n");
+                    writeln!(all_logs, "=== RAW LOGS ===").unwrap();
                     all_logs.push_str(raw_str);
                 }
             }

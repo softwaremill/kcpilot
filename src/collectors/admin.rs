@@ -9,6 +9,9 @@ use tracing::{error, info};
 
 use super::{Collector, CollectorError, CollectorResult, KafkaConfig};
 
+/// Conversion constant for seconds to milliseconds
+const MS_PER_SEC: u64 = 1000;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AdminCollectorOutput {
     pub cluster: ClusterInfo,
@@ -52,6 +55,12 @@ pub struct PartitionInfo {
 
 pub struct AdminCollector {
     redact_sensitive: bool,
+}
+
+impl Default for AdminCollector {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl AdminCollector {
@@ -109,7 +118,7 @@ impl AdminCollector {
         // Timeout settings
         client_config.set(
             "socket.timeout.ms",
-            (config.timeout_secs * 1000).to_string(),
+            (config.timeout_secs * MS_PER_SEC).to_string(),
         );
         
         client_config

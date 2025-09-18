@@ -3,10 +3,20 @@ use crate::snapshot::format::{Finding, Severity, Snapshot};
 use colored::Colorize;
 use std::path::Path;
 
+/// Terminal formatting constants
+const TERMINAL_WIDTH: usize = 80;
+const SEPARATOR_WIDTH: usize = 40;
+
 /// Terminal report generator for console output
 pub struct TerminalReporter {
     verbose: bool,
     use_colors: bool,
+}
+
+impl Default for TerminalReporter {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl TerminalReporter {
@@ -38,22 +48,24 @@ impl TerminalReporter {
     
     /// Report with external findings (e.g., from LLM analyzer)
     pub fn report(&self, snapshot: &Snapshot, findings: &[Finding]) -> ReportResult<()> {
-        // Create a temporary snapshot with the provided findings
-        let mut temp_snapshot = snapshot.clone();
-        temp_snapshot.findings = findings.to_vec();
-        self.print_snapshot(&temp_snapshot)
+        self.print_header()?;
+        self.print_cluster_info(snapshot)?;
+        self.print_summary_with_findings(snapshot, findings)?;
+        self.print_findings_list(findings)?;
+        self.print_footer()?;
+        Ok(())
     }
     
     fn print_header(&self) -> ReportResult<()> {
-        println!("\n{}", "═".repeat(80).bright_blue());
+        println!("\n{}", "═".repeat(TERMINAL_WIDTH).bright_blue());
         println!("{}", "KAFKAPILOT HEALTH REPORT".bright_white().bold());
-        println!("{}", "═".repeat(80).bright_blue());
+        println!("{}", "═".repeat(TERMINAL_WIDTH).bright_blue());
         Ok(())
     }
     
     fn print_cluster_info(&self, snapshot: &Snapshot) -> ReportResult<()> {
         println!("\n{}", "📊 Cluster Information".bright_white().bold());
-        println!("{}", "─".repeat(40).bright_black());
+        println!("{}", "─".repeat(SEPARATOR_WIDTH).bright_black());
         
         if let Some(id) = &snapshot.cluster.id {
             println!("  Cluster ID:      {}", id.bright_cyan());
@@ -79,7 +91,7 @@ impl TerminalReporter {
     
     fn print_summary(&self, snapshot: &Snapshot) -> ReportResult<()> {
         println!("\n{}", "📈 Analysis Summary".bright_white().bold());
-        println!("{}", "─".repeat(40).bright_black());
+        println!("{}", "─".repeat(SEPARATOR_WIDTH).bright_black());
         
         let total_findings = snapshot.findings.len();
         let critical = snapshot.findings.iter().filter(|f| f.severity == Severity::Critical).count();
@@ -91,19 +103,19 @@ impl TerminalReporter {
         println!("  Total Findings:  {}", total_findings.to_string().bright_yellow());
         
         if critical > 0 {
-            println!("  {}  Critical:    {}", "🔴", critical.to_string().bright_red().bold());
+            println!("  🔴  Critical:    {}", critical.to_string().bright_red().bold());
         }
         if high > 0 {
-            println!("  {}  High:        {}", "🟠", high.to_string().bright_red());
+            println!("  🟠  High:        {}", high.to_string().bright_red());
         }
         if medium > 0 {
-            println!("  {}  Medium:      {}", "🟡", medium.to_string().bright_yellow());
+            println!("  🟡  Medium:      {}", medium.to_string().bright_yellow());
         }
         if low > 0 {
-            println!("  {}  Low:         {}", "🟢", low.to_string().bright_green());
+            println!("  🟢  Low:         {}", low.to_string().bright_green());
         }
         if info > 0 {
-            println!("  {}  Info:        {}", "ℹ️", info.to_string().bright_blue());
+            println!("  ℹ️  Info:        {}", info.to_string().bright_blue());
         }
         
         // Calculate health score
@@ -122,6 +134,69 @@ impl TerminalReporter {
         Ok(())
     }
     
+    /// Print summary with external findings (avoiding snapshot clone)
+    fn print_summary_with_findings(&self, _snapshot: &Snapshot, findings: &[Finding]) -> ReportResult<()> {
+        println!("\n{}", "📈 Analysis Summary".bright_white().bold());
+        println!("{}", "─".repeat(SEPARATOR_WIDTH).bright_black());
+        
+        let total_findings = findings.len();
+        let critical = findings.iter().filter(|f| f.severity == Severity::Critical).count();
+        let high = findings.iter().filter(|f| f.severity == Severity::High).count();
+        let medium = findings.iter().filter(|f| f.severity == Severity::Medium).count();
+        let low = findings.iter().filter(|f| f.severity == Severity::Low).count();
+        let info = findings.iter().filter(|f| f.severity == Severity::Info).count();
+        
+        println!("  Total Findings:  {}", total_findings.to_string().bright_yellow());
+        
+        if critical > 0 {
+            println!("  🔴  Critical:    {}", critical.to_string().bright_red().bold());
+        }
+        if high > 0 {
+            println!("  🟠  High:        {}", high.to_string().bright_red());
+        }
+        if medium > 0 {
+            println!("  🟡  Medium:      {}", medium.to_string().bright_yellow());
+        }
+        if low > 0 {
+            println!("  🟢  Low:         {}", low.to_string().bright_green());
+        }
+        if info > 0 {
+            println!("  ℹ️  Info:        {}", info.to_string().bright_blue());
+        }
+        
+        // Calculate health score based on findings
+        let health_score = self.calculate_health_score_from_findings(findings);
+        let score_color = if health_score >= 80.0 {
+            "green"
+        } else if health_score >= 60.0 {
+            "yellow"
+        } else {
+            "red"
+        };
+        
+        println!("\n  Health Score:    {}/100", 
+                 format!("{:.0}", health_score).color(score_color).bold());
+        
+        Ok(())
+    }
+    
+    /// Print findings list (avoiding snapshot clone)
+    fn print_findings_list(&self, findings: &[Finding]) -> ReportResult<()> {
+        if findings.is_empty() {
+            println!("\n✅ {}", "No issues found! Your cluster appears healthy.".bright_green());
+            return Ok(());
+        }
+        
+        println!("\n{}", "🔍 Findings".bright_white().bold());
+        println!("{}", "═".repeat(TERMINAL_WIDTH).bright_black());
+        
+        for (idx, finding) in findings.iter().enumerate() {
+            self.print_finding(idx + 1, finding)?;
+        }
+        
+        Ok(())
+    }
+    
     fn print_findings(&self, snapshot: &Snapshot) -> ReportResult<()> {
         if snapshot.findings.is_empty() {
             println!("\n✅ {}", "No issues found! Your cluster appears healthy.".bright_green());
@@ -129,7 +204,7 @@ impl TerminalReporter {
         }
         
         println!("\n{}", "🔍 Findings".bright_white().bold());
-        println!("{}", "═".repeat(80).bright_black());
+        println!("{}", "═".repeat(TERMINAL_WIDTH).bright_black());
         
         for (idx, finding) in snapshot.findings.iter().enumerate() {
             self.print_finding(idx + 1, finding)?;
@@ -234,13 +309,13 @@ impl TerminalReporter {
     
     fn print_footer(&self) -> ReportResult<()> {
         println!("\n{}", "💡 Next Steps".bright_white().bold());
-        println!("{}", "─".repeat(40).bright_black());
+        println!("{}", "─".repeat(SEPARATOR_WIDTH).bright_black());
         println!("  1. Address critical and high severity findings first");
         println!("  2. Review remediation scripts before applying");
         println!("  3. Test changes in a non-production environment");
         println!("  4. Monitor cluster after applying fixes");
         
-        println!("\n{}", "═".repeat(80).bright_blue());
+        println!("\n{}", "═".repeat(TERMINAL_WIDTH).bright_blue());
         println!("{}", "Report generated by KafkaPilot".bright_black());
         println!("{}", "For support, visit: https://kafkapilot.io".bright_black());
         println!();
@@ -249,9 +324,13 @@ impl TerminalReporter {
     }
     
     fn calculate_health_score(&self, snapshot: &Snapshot) -> f64 {
+        self.calculate_health_score_from_findings(&snapshot.findings)
+    }
+    
+    fn calculate_health_score_from_findings(&self, findings: &[Finding]) -> f64 {
         let mut score: f64 = 100.0;
         
-        for finding in &snapshot.findings {
+        for finding in findings {
             let penalty = match finding.severity {
                 Severity::Critical => 25.0,
                 Severity::High => 15.0,

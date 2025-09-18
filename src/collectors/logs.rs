@@ -15,6 +15,12 @@ pub struct LogCollector {
     patterns: Vec<String>,
 }
 
+impl Default for LogCollector {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl LogCollector {
     pub fn new() -> Self {
         Self {
@@ -86,7 +92,7 @@ impl LogCollector {
         }
 
         let file = File::open(path)
-            .map_err(|e| CollectorError::IoError(e))?;
+            .map_err(CollectorError::IoError)?;
         let reader = BufReader::new(file);
         
         let mut entries = Vec::new();
@@ -97,7 +103,7 @@ impl LogCollector {
                 break;
             }
             
-            let line = line_result.map_err(|e| CollectorError::IoError(e))?;
+            let line = line_result.map_err(CollectorError::IoError)?;
             
             // Check if line matches any pattern
             let matches_pattern = self.patterns.iter().any(|pattern| {

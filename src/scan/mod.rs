@@ -88,6 +88,16 @@ pub struct Scanner {
     detected_cluster_mode: Option<crate::snapshot::format::ClusterMode>,
 }
 
+/// Helper function to infer datacenter from hostname
+fn infer_datacenter(hostname: &str) -> String {
+    match () {
+        _ if hostname.contains("-dc1-") => "dc1",
+        _ if hostname.contains("-dc2-") => "dc2",
+        _ if hostname.contains("-dc3-") => "dc3",
+        _ => "unknown",
+    }.to_string()
+}
+
 impl Scanner {
     /// Detect cluster mode from server.properties content
     fn detect_cluster_mode_from_config(&mut self, server_properties_content: &str) -> crate::snapshot::format::ClusterMode {
@@ -109,13 +119,13 @@ impl Scanner {
     
     /// Set the detected cluster mode and return it
     pub fn set_cluster_mode(&mut self, mode: crate::snapshot::format::ClusterMode) -> crate::snapshot::format::ClusterMode {
-        self.detected_cluster_mode = Some(mode.clone());
+        self.detected_cluster_mode = Some(mode);
         mode
     }
     
     /// Get the currently detected cluster mode
     pub fn get_cluster_mode(&self) -> Option<crate::snapshot::format::ClusterMode> {
-        self.detected_cluster_mode.clone()
+        self.detected_cluster_mode
     }
     
     pub fn new(bastion_alias: Option<String>) -> Result<Self> {
@@ -250,15 +260,7 @@ impl Scanner {
                         current_broker.as_mut().unwrap().hostname = hostname.to_string();
                         
                         // Try to infer datacenter from hostname pattern
-                        let datacenter = if hostname.contains("-dc1-") {
-                            "dc1".to_string()
-                        } else if hostname.contains("-dc2-") {
-                            "dc2".to_string()
-                        } else if hostname.contains("-dc3-") {
-                            "dc3".to_string()
-                        } else {
-                            "unknown".to_string()
-                        };
+                        let datacenter = infer_datacenter(hostname);
                         current_broker.as_mut().unwrap().datacenter = datacenter;
                     }
                 } else if line.starts_with("port:") || line.starts_with("rack:") {
@@ -444,15 +446,7 @@ impl Scanner {
                 let hostname = line.split(':').next().unwrap_or(line).to_string();
                 
                 // Try to infer datacenter from hostname pattern
-                let datacenter = if hostname.contains("-dc1-") {
-                    "dc1".to_string()
-                } else if hostname.contains("-dc2-") {
-                    "dc2".to_string()
-                } else if hostname.contains("-dc3-") {
-                    "dc3".to_string()
-                } else {
-                    "unknown".to_string()
-                };
+                let datacenter = infer_datacenter(&hostname);
                 
                 discovered_brokers.push(BrokerInfo {
                     id: broker_id,
@@ -793,7 +787,7 @@ impl Scanner {
             output_directory: self.config.output_dir.to_string_lossy().to_string(),
             scan_version: "1.0".to_string(),
             accessible_brokers,
-            cluster_mode: self.detected_cluster_mode.clone(),
+            cluster_mode: self.detected_cluster_mode,
         };
         
         let json = serde_json::to_string_pretty(&metadata)?;
@@ -943,7 +937,7 @@ impl Scanner {
                         if self.detected_cluster_mode.is_none() {
                             if let Some(server_props) = data.configs.get("server.properties") {
                                 let detected_mode = self.detect_cluster_mode_from_config(server_props);
-                                self.detected_cluster_mode = Some(detected_mode.clone());
+                                self.detected_cluster_mode = Some(detected_mode);
                                 info!("🔍 Detected cluster mode from broker {}: {:?}", broker.id, detected_mode);
                                 
                                 // If Zookeeper mode, log that additional data collection could be done
@@ -1025,12 +1019,12 @@ impl Scanner {
                 output_directory: self.config.output_dir.to_string_lossy().to_string(),
                 scan_version: "1.0".to_string(),
                 accessible_brokers: accessible_brokers.len(),
-                cluster_mode: self.detected_cluster_mode.clone(),
+                cluster_mode: self.detected_cluster_mode,
             },
             cluster_data,
             broker_data,
             collection_stats: stats,
-            detected_cluster_mode: self.detected_cluster_mode.clone(),
+            detected_cluster_mode: self.detected_cluster_mode,
         })
     }
     

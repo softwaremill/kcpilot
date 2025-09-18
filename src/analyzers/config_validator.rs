@@ -9,6 +9,12 @@ use std::collections::HashMap;
 /// Configuration validator that checks for common Kafka configuration issues
 pub struct ConfigValidator;
 
+impl Default for ConfigValidator {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ConfigValidator {
     pub fn new() -> Self {
         Self
@@ -32,7 +38,7 @@ impl ConfigValidator {
                                 if trimmed.starts_with("broker.id=") {
                                     let broker_id = trimmed.strip_prefix("broker.id=").unwrap_or("").trim();
                                     config_broker_ids.entry(broker_id.to_string())
-                                        .or_insert_with(Vec::new)
+                                        .or_default()
                                         .push(format!("brokers/{}", file_path));
                                 }
                             }
@@ -270,7 +276,7 @@ impl ConfigValidator {
     /// Check for other common configuration issues
     fn check_common_issues(&self, snapshot: &Snapshot) -> Vec<Finding> {
         let mut findings = Vec::new();
-        let mut replication_issues = HashMap::new();
+        let mut replication_issues: HashMap<String, Vec<String>> = HashMap::new();
         let mut log_dir_issues = Vec::new();
         
         if let Some(config_data) = &snapshot.collectors.config {
@@ -285,7 +291,7 @@ impl ConfigValidator {
                                 if trimmed.starts_with("offsets.topic.replication.factor=1") ||
                                    trimmed.starts_with("transaction.state.log.replication.factor=1") {
                                     replication_issues.entry(trimmed.to_string())
-                                        .or_insert_with(Vec::new)
+                                        .or_default()
                                         .push(format!("brokers/{}", file_path));
                                 }
                                 

@@ -12,6 +12,12 @@ pub struct RuleAnalyzer {
     enabled_rules: Vec<Box<dyn Rule>>,
 }
 
+impl Default for RuleAnalyzer {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl RuleAnalyzer {
     pub fn new() -> Self {
         Self {

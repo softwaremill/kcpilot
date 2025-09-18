@@ -95,9 +95,18 @@ pub struct CollectionContext {
     pub dry_run: bool,
 }
 
+/// Type alias for boxed collectors to simplify type signatures
+pub type BoxedCollector = Box<dyn Collector<Config = KafkaConfig, Output = serde_json::Value>>;
+
 /// Registry for collectors
 pub struct CollectorRegistry {
-    collectors: HashMap<String, Box<dyn Collector<Config = KafkaConfig, Output = serde_json::Value>>>,
+    collectors: HashMap<String, BoxedCollector>,
+}
+
+impl Default for CollectorRegistry {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl CollectorRegistry {
@@ -107,11 +116,11 @@ impl CollectorRegistry {
         }
     }
     
-    pub fn register(&mut self, name: String, collector: Box<dyn Collector<Config = KafkaConfig, Output = serde_json::Value>>) {
+    pub fn register(&mut self, name: String, collector: BoxedCollector) {
         self.collectors.insert(name, collector);
     }
     
-    pub fn get(&self, name: &str) -> Option<&Box<dyn Collector<Config = KafkaConfig, Output = serde_json::Value>>> {
+    pub fn get(&self, name: &str) -> Option<&BoxedCollector> {
         self.collectors.get(name)
     }
     
