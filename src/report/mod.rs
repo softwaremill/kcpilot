@@ -1,5 +1,6 @@
 pub mod terminal;
 pub mod markdown;
+pub mod json;
 
 use crate::snapshot::format::Snapshot;
 use std::path::Path;

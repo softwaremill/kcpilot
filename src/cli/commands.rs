@@ -48,7 +48,7 @@ pub enum Commands {
         #[arg(short, long, value_enum, default_value = "terminal")]
         report: ReportFormat,
         
-        /// Output file path (required for markdown format, ignored for terminal)
+        /// Output file path (optional for json, required for markdown, ignored for terminal)
         #[arg(short, long)]
         output: Option<PathBuf>,
         

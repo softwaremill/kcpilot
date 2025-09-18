@@ -5,6 +5,7 @@ use crate::cli::utils::load_snapshot_from_directory;
 use crate::snapshot::format::Snapshot;
 use crate::report::terminal::TerminalReporter;
 use crate::report::markdown::MarkdownReporter;
+use crate::report::json::JsonReporter;
 use std::fs;
 use std::path::PathBuf;
 use tracing::{info, warn};
@@ -122,8 +123,21 @@ pub async fn handle_analyze_command(
             reporter.report(&snapshot_data, &findings)?;
         }
         crate::cli::commands::ReportFormat::Json => {
-            let json = serde_json::to_string_pretty(&findings)?;
-            println!("{}", json);
+            let output_path = output.unwrap_or_else(|| {
+                // If no output specified, use stdout (represented as "-")
+                PathBuf::from("-")
+            });
+            
+            if output_path != PathBuf::from("-") {
+                info!("Generating JSON report: {}", output_path.display());
+            }
+            
+            let reporter = JsonReporter::new();
+            reporter.save_report(&snapshot_data, &findings, &output_path)?;
+            
+            if output_path != PathBuf::from("-") {
+                info!("✅ JSON report saved to: {}", output_path.display());
+            }
         }
         crate::cli::commands::ReportFormat::Markdown => {
             let output_path = output.unwrap_or_else(|| {
