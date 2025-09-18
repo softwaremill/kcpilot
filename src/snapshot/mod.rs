@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
-use tracing::{debug, info, warn};
+use tracing::{debug, info};
 
 pub use format::{Snapshot, SnapshotMetadata};
 

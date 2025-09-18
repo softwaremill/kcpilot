@@ -716,26 +716,6 @@ impl Scanner {
         Ok(Vec::new())
     }
 
-    /// Parse broker information from API versions output
-    fn parse_broker_api_versions_output(&self, output: &str, broker_address: &str) -> Vec<BrokerInfo> {
-        // This is a simplified parser - in real scenarios we might extract more broker info
-        // For now, if the command succeeded, we know at least the given broker exists
-        let hostname = broker_address.split(':').next().unwrap_or("unknown").to_string();
-        
-        vec![BrokerInfo {
-            id: 0, // Will be determined during data collection
-            hostname,
-            datacenter: "unknown".to_string(),
-        }]
-    }
-
-    /// Try to discover additional brokers from JMX or log parsing
-    async fn discover_brokers_from_jmx_or_logs(&self, _broker_address: &str) -> Result<Vec<BrokerInfo>> {
-        // This could be enhanced to use JMX tools or parse Kafka logs for broker information
-        // For now, return empty to fall back to other methods
-        Ok(Vec::new())
-    }
-
     /// Discover brokers by parsing server.properties files on known brokers
     async fn discover_brokers_from_configs(&self, _broker_address: &str) -> Result<Vec<BrokerInfo>> {
         // This would involve SSHing to the known broker, finding server.properties,

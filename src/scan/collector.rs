@@ -325,36 +325,6 @@ impl BrokerCollector {
         }
     }
     
-    /// Collect additional Zookeeper-specific data
-    async fn collect_zookeeper_data(&self, broker_dir: &std::path::Path, configs: &mut HashMap<String, String>) -> Result<()> {
-        println!("🔍 Collecting additional Zookeeper-specific data...");
-        
-        // Try to collect Zookeeper connection information
-        if let Ok(zk_info) = self.run_on_broker("echo 'Zookeeper mode detected' | head -1") {
-            fs::write(broker_dir.join("configs").join("zookeeper_mode_detected.txt"), &zk_info)?;
-            configs.insert("zookeeper_mode_detected".to_string(), zk_info);
-        }
-        
-        // Check for Zookeeper-related logs or configurations
-        let zk_related_commands = vec![
-            ("zookeeper_logs", "find /var/log -name '*zookeeper*' 2>/dev/null | head -5"),
-            ("kafka_zk_logs", "find /var/log -name '*kafka*' -exec grep -l 'zookeeper\\|ZooKeeper' {} \\; 2>/dev/null | head -3"),
-        ];
-        
-        for (name, cmd) in zk_related_commands {
-            if let Ok(output) = self.run_on_broker(cmd) {
-                if !output.trim().is_empty() {
-                    fs::write(broker_dir.join("configs").join(format!("{}.txt", name)), &output)?;
-                    configs.insert(name.to_string(), output);
-                    println!("  ✅ Collected {}", name);
-                }
-            }
-        }
-        
-        println!("  ✅ Zookeeper-specific data collection completed");
-        Ok(())
-    }
-    
     /// Execute command on broker through bastion (using agent forwarding)
     fn run_on_broker(&self, command: &str) -> Result<String> {
         let ssh_command = format!(
@@ -384,46 +354,6 @@ impl BrokerCollector {
         };
         
         Ok(String::from_utf8_lossy(&output.stdout).to_string())
-    }
-    
-    /// Extract Kafka config path from process command line
-    fn extract_config_from_process(&self, ps_output: &str) -> Option<String> {
-        // Look for common patterns in Kafka startup commands
-        let line = ps_output.lines().next()?;
-        
-        // Pattern 1: kafka-server-start.sh /path/to/server.properties
-        if let Some(server_start_pos) = line.find("kafka-server-start") {
-            let after_start = &line[server_start_pos..];
-            let parts: Vec<&str> = after_start.split_whitespace().collect();
-            for (i, part) in parts.iter().enumerate() {
-                if part.ends_with("server.properties") && i > 0 {
-                    return Some(part.to_string());
-                }
-            }
-        }
-        
-        // Pattern 2: Direct java invocation with config file
-        let parts: Vec<&str> = line.split_whitespace().collect();
-        for (i, part) in parts.iter().enumerate() {
-            if part.ends_with("server.properties") && i > 0 {
-                return Some(part.to_string());
-            }
-        }
-        
-        // Pattern 3: Look for --override or config parameters
-        for (i, part) in parts.iter().enumerate() {
-            if *part == "--override" && i + 1 < parts.len() {
-                let next_part = parts[i + 1];
-                if next_part.contains("server.properties") || next_part.starts_with("config") {
-                    // Extract the config file path
-                    if let Some(eq_pos) = next_part.find('=') {
-                        return Some(next_part[eq_pos + 1..].to_string());
-                    }
-                }
-            }
-        }
-        
-        None
     }
 
     /// Enhanced config discovery - parse process arguments to get actual runtime config files
@@ -869,6 +799,11 @@ impl BrokerCollector {
                     break;
                 }
             }
+        }
+        
+        // Log summary of configuration discovery results
+        if log4j_found {
+            println!("ℹ️  Log4j configuration found and collected");
         }
         
         let enhanced_count = configs.values().filter(|v| v.contains("enhanced:")).count();
