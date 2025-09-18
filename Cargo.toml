@@ -2,10 +2,10 @@
 name = "kafkapilot"
 version = "0.1.0"
 edition = "2021"
-authors = ["Krzysztof Grajek <krzysztof.grajek@softwaremill.com>"]
+authors = ["SoftwareMill <hello@softwaremill.com>"]
 description = "Kafka cluster health diagnostics and remediation tool"
 repository = "https://github.com/softwaremill/kafkapilot"
-license = "MIT"
+license = "Apache-2.0"
 
 [lib]
 name = "kafkapilot"

@@ -134,10 +134,10 @@ kafka-scan-TIMESTAMP/
 - Data directory information and sizes
 - Network connections and ports
 
-## Development
+## Commercial Support
 
-See [DESIGN.md](DESIGN.md) for architecture and development details.
+We offer commercial support for Kafka and related technologies, as well as development services. Contact us to learn more about our offer!
 
-## License
+## Copyright
 
-MIT
+Copyright (C) 2025 SoftwareMill https://softwaremill.com.

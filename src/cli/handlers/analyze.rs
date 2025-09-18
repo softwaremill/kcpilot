@@ -11,23 +11,23 @@ use std::path::PathBuf;
 use tracing::{info, warn};
 
 pub async fn handle_analyze_command(
-    snapshot: PathBuf,
+    scanned_data: PathBuf,
     report: crate::cli::commands::ReportFormat,
     output: Option<PathBuf>,
     llmdbg: bool,
     llm_timeout: u64,
 ) -> Result<()> {
-    info!("Starting analysis of snapshot: {}", snapshot.display());
+    info!("Starting analysis of scanned data: {}", scanned_data.display());
 
     // Load snapshot data
-    let snapshot_data = if snapshot.is_dir() {
+    let snapshot_data = if scanned_data.is_dir() {
         // Load from scan directory
-        load_snapshot_from_directory(&snapshot)?
+        load_snapshot_from_directory(&scanned_data)?
     } else {
         // Load from JSON file
-        info!("\n📄 Loading snapshot from JSON file: {}", snapshot.display());
+        info!("\n📄 Loading snapshot from JSON file: {}", scanned_data.display());
         info!("────────────────────────────────────────");
-        let content = fs::read_to_string(&snapshot)?;
+        let content = fs::read_to_string(&scanned_data)?;
         let loaded_snapshot: Snapshot = serde_json::from_str(&content)?;
 
         // Log what's available in the JSON snapshot

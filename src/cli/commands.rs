@@ -38,11 +38,11 @@ pub enum Commands {
         broker: Option<String>,
     },
     
-    /// Analyze a previously collected snapshot
+    /// Analyze previously collected scan data
     Analyze {
-        /// Path to the snapshot file
-        #[arg(value_name = "SNAPSHOT")]
-        snapshot: PathBuf,
+        /// Path to the scanned data directory
+        #[arg(value_name = "SCANNED_DATA")]
+        scanned_data: PathBuf,
         
         /// Report format
         #[arg(short, long, value_enum, default_value = "terminal")]
@@ -61,31 +61,7 @@ pub enum Commands {
         llm_timeout: u64,
     },
     
-    /// Continuously monitor cluster health
-    Watch {
-        /// Monitoring interval in seconds
-        #[arg(short, long, default_value = "60")]
-        interval: u64,
-        
-        /// Enable alerting
-        #[arg(short, long)]
-        alert: bool,
-    },
     
-    /// Apply automated fixes for detected issues
-    Fix {
-        /// Path to the snapshot file
-        #[arg(value_name = "SNAPSHOT")]
-        snapshot: PathBuf,
-        
-        /// Dry run mode (show what would be fixed)
-        #[arg(long)]
-        dry_run: bool,
-        
-        /// Interactive mode
-        #[arg(short, long)]
-        interactive: bool,
-    },
     
     /// Manage KafkaPilot configuration
     Config {
@@ -124,8 +100,8 @@ pub enum TaskCommand {
         /// Task ID to test
         task_id: String,
         
-        /// Path to snapshot file or directory
-        snapshot: PathBuf,
+        /// Path to scanned data directory
+        scanned_data: PathBuf,
         
         /// Enable debug output
         #[arg(long)]

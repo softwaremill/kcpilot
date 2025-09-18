@@ -20,19 +20,11 @@ async fn main() -> Result<()> {
             broker,
         } => handle_scan_command(bastion, output, broker).await,
 
-        Commands::Analyze { snapshot, report, output, llmdbg, llm_timeout } => {
-            handle_analyze_command(snapshot, report, output, llmdbg, llm_timeout).await
-        },
-
-        Commands::Watch { .. } => {
-            println!("Watch command not yet implemented");
-            Ok(())
+        Commands::Analyze { scanned_data, report, output, llmdbg, llm_timeout } => {
+            handle_analyze_command(scanned_data, report, output, llmdbg, llm_timeout).await
         }
 
-        Commands::Fix { .. } => {
-            println!("Fix command not yet implemented");
-            Ok(())
-        }
+
 
         Commands::Config { subcommand } => {
             println!("Config command not yet implemented");

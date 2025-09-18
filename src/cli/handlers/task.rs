@@ -35,7 +35,7 @@ pub async fn handle_task_command(action: crate::cli::commands::TaskCommand) -> R
             }
         }
 
-        TaskCommand::Test { task_id, snapshot, debug } => {
+        TaskCommand::Test { task_id, scanned_data, debug } => {
             // Load the specific task
             let loader = TaskLoader::default();
             let tasks = loader.load_all()?;
@@ -45,11 +45,11 @@ pub async fn handle_task_command(action: crate::cli::commands::TaskCommand) -> R
 
             println!("🧪 Testing task: {}", task.name);
 
-            // Load snapshot
-            let snapshot_data = if snapshot.is_dir() {
-                load_snapshot_from_directory(&snapshot)?
+            // Load scanned data
+            let snapshot_data = if scanned_data.is_dir() {
+                load_snapshot_from_directory(&scanned_data)?
             } else {
-                let content = fs::read_to_string(&snapshot)?;
+                let content = fs::read_to_string(&scanned_data)?;
                 serde_json::from_str(&content)?
             };
 
