@@ -63,11 +63,8 @@ pub enum Commands {
     
     
     
-    /// Manage KafkaPilot configuration
-    Config {
-        #[command(subcommand)]
-        subcommand: ConfigCommands,
-    },
+    /// Display current KafkaPilot configuration
+    Config,
     
     /// Show information about KafkaPilot
     Info,
@@ -129,29 +126,6 @@ pub enum TaskCommand {
     },
 }
 
-#[derive(Subcommand, Debug)]
-pub enum ConfigCommands {
-    /// Show current configuration
-    Show,
-    
-    /// Set a configuration value
-    Set {
-        /// Configuration key
-        key: String,
-        
-        /// Configuration value
-        value: String,
-    },
-    
-    /// Get a configuration value
-    Get {
-        /// Configuration key
-        key: String,
-    },
-    
-    /// Reset configuration to defaults
-    Reset,
-}
 
 #[derive(Debug, Clone, ValueEnum)]
 pub enum ReportFormat {
