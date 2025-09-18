@@ -31,7 +31,7 @@ impl Default for LlmConfig {
     fn default() -> Self {
         Self {
             api_key: String::new(),
-            model: "gpt-4-turbo-preview".to_string(),
+            model: "gpt-4o".to_string(),
             api_base: None,
             timeout_secs: 300,  // Increased from 60 to 300 seconds (5 minutes)
             max_tokens: 8000,  // Increased from 4000 to 8000 for larger responses
