@@ -5,7 +5,6 @@ use crate::cli::utils::load_snapshot_from_directory;
 use crate::snapshot::format::Snapshot;
 use crate::report::terminal::TerminalReporter;
 use crate::report::markdown::MarkdownReporter;
-use crate::report::html::HtmlReporter;
 use std::fs;
 use std::path::PathBuf;
 use tracing::{info, warn};
@@ -137,22 +136,6 @@ pub async fn handle_analyze_command(
             let reporter = MarkdownReporter::new();
             reporter.save_report(&snapshot_data, &findings, &output_path)?;
             info!("✅ Report saved to: {}", output_path.display());
-        }
-        crate::cli::commands::ReportFormat::Html => {
-            let output_path = output.unwrap_or_else(|| {
-                // Generate default directory name with timestamp
-                let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
-                PathBuf::from(format!("kafka_report_{}", timestamp))
-            });
-
-            info!("Generating HTML report: {}", output_path.display());
-            let reporter = HtmlReporter::new();
-            reporter.save_report(&snapshot_data, &findings, &output_path)?;
-            info!("✅ HTML report saved to: {}/index.html", output_path.display());
-            info!("   Assets saved to: {}/assets/", output_path.display());
-        }
-        _ => {
-            println!("Report format {:?} not yet implemented", report);
         }
     }
 

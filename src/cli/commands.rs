@@ -131,7 +131,5 @@ pub enum TaskCommand {
 pub enum ReportFormat {
     Terminal,
     Json,
-    Html,
     Markdown,
-    Pdf,
 }
