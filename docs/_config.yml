@@ -8,21 +8,17 @@ description: >-
 url: "https://softwaremill.github.io"
 baseurl: "/kafkapilot"
 
-# Theme (GitHub Pages compatible)
-remote_theme: jekyll/minima
+# Use GitHub Pages default theme
+theme: minima
 
 # Build settings
 markdown: kramdown
 highlighter: rouge
-kramdown:
-  input: GFM
-  syntax_highlighter: rouge
 
-# Plugins (GitHub Pages compatible)
+# Plugins
 plugins:
   - jekyll-feed
   - jekyll-sitemap
-  - jekyll-include-cache
 
 # Navigation
 header_pages:
@@ -39,14 +35,9 @@ author:
   name: SoftwareMill
   email: hello@softwaremill.com
 
-# Social and contact
+# Social links
 github_username: softwaremill
 email: hello@softwaremill.com
-
-# Custom variables
-softwaremill:
-  url: https://softwaremill.com
-  text: SoftwareMill
 
 # Exclude from processing
 exclude:
@@ -59,34 +50,6 @@ exclude:
   - vendor/ruby/
   - README.md
 
-# Include
-include:
-  - _pages
-
-# Collections
-collections:
-  tutorials:
-    output: true
-    permalink: /:collection/:name/
-
-# Defaults
-defaults:
-  - scope:
-      path: ""
-      type: "pages"
-    values:
-      layout: "page"
-  - scope:
-      path: ""
-      type: "posts"
-    values:
-      layout: "post"
-  - scope:
-      path: ""
-      type: "tutorials"
-    values:
-      layout: "page"
-
-# SEO settings
+# SEO
 lang: en_US
 timezone: UTC
