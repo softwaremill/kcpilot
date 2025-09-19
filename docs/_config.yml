@@ -1,10 +1,15 @@
+# Site settings
 title: KafkaPilot
-description: CLI-first Kafka health diagnostics tool
-url: https://softwaremill.github.io
-baseurl: /kafkapilot
+description: >-
+  CLI-first Kafka health diagnostics tool for production environments.
+  Automatically collects cluster signals, identifies issues, and provides 
+  actionable remediation guidance.
 
-# Theme
-theme: minima
+url: "https://softwaremill.github.io"
+baseurl: "/kafkapilot"
+
+# Theme (GitHub Pages compatible)
+remote_theme: jekyll/minima
 
 # Build settings
 markdown: kramdown
@@ -13,10 +18,11 @@ kramdown:
   input: GFM
   syntax_highlighter: rouge
 
-# Plugins
+# Plugins (GitHub Pages compatible)
 plugins:
   - jekyll-feed
   - jekyll-sitemap
+  - jekyll-include-cache
 
 # Navigation
 header_pages:
@@ -28,7 +34,59 @@ header_pages:
   - api.md
   - support.md
 
-# Footer
+# Author info
+author:
+  name: SoftwareMill
+  email: hello@softwaremill.com
+
+# Social and contact
+github_username: softwaremill
+email: hello@softwaremill.com
+
+# Custom variables
 softwaremill:
   url: https://softwaremill.com
   text: SoftwareMill
+
+# Exclude from processing
+exclude:
+  - Gemfile
+  - Gemfile.lock
+  - node_modules
+  - vendor/bundle/
+  - vendor/cache/
+  - vendor/gems/
+  - vendor/ruby/
+  - README.md
+
+# Include
+include:
+  - _pages
+
+# Collections
+collections:
+  tutorials:
+    output: true
+    permalink: /:collection/:name/
+
+# Defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "page"
+  - scope:
+      path: ""
+      type: "posts"
+    values:
+      layout: "post"
+  - scope:
+      path: ""
+      type: "tutorials"
+    values:
+      layout: "page"
+
+# SEO settings
+lang: en_US
+timezone: UTC

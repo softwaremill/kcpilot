@@ -24,8 +24,6 @@ async fn main() -> Result<()> {
             handle_analyze_command(scanned_data, report, output, llmdbg, llm_timeout).await
         }
 
-
-
         Commands::Config => {
             handle_config_command()
         }
