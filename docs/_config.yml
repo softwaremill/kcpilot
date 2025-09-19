@@ -7,28 +7,19 @@ description: >-
 
 url: "https://softwaremill.github.io"
 baseurl: "/kafkapilot"
-
-# Use GitHub Pages default theme
-theme: minima
+version: "1.0.0"
 
 # Build settings
 markdown: kramdown
 highlighter: rouge
+sass:
+  sass_dir: _sass
+  style: compressed
 
 # Plugins
 plugins:
   - jekyll-feed
   - jekyll-sitemap
-
-# Navigation
-header_pages:
-  - quickstart.md
-  - installation.md
-  - tutorials.md
-  - how-to.md
-  - examples.md
-  - api.md
-  - support.md
 
 # Author info
 author:
@@ -50,6 +41,47 @@ exclude:
   - vendor/ruby/
   - README.md
 
+# Collections and defaults
+defaults:
+  - scope:
+      path: ""
+      type: "pages"
+    values:
+      layout: "page"
+  - scope:
+      path: "index.md"
+    values:
+      layout: "home"
+
 # SEO
 lang: en_US
 timezone: UTC
+
+# Custom variables
+softwaremill:
+  url: https://softwaremill.com
+  text: SoftwareMill
+
+# Navigation structure (used by sidebar)
+navigation:
+  getting_started:
+    - title: "Overview"
+      url: "/"
+    - title: "Quickstart"
+      url: "/quickstart"
+    - title: "Installation"
+      url: "/installation"
+    - title: "Support"
+      url: "/support"
+  
+  tutorials:
+    - title: "All Tutorials"
+      url: "/tutorials"
+  
+  reference:
+    - title: "CLI Reference"
+      url: "/api"
+    - title: "Examples"
+      url: "/examples"
+    - title: "How-To Guides"
+      url: "/how-to"
