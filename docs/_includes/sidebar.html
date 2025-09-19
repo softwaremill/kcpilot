@@ -1,0 +1,97 @@
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <h1><i class="icon">🚁</i> KafkaPilot</h1>
+    <div class="version">v{{ site.version | default: "1.0" }}</div>
+  </div>
+  
+  <div class="sidebar-search">
+    <input type="text" placeholder="Search docs" id="search-input">
+  </div>
+  
+  <div class="sidebar-nav">
+    <div class="nav-section">
+      <div class="nav-section-title">Getting Started</div>
+      <ul class="nav-list">
+        <li><a href="{{ "/" | relative_url }}">Overview</a></li>
+        <li><a href="{{ "/quickstart" | relative_url }}">Quickstart</a></li>
+        <li><a href="{{ "/installation" | relative_url }}">Installation</a></li>
+        <li><a href="https://github.com/softwaremill/kafkapilot">GitHub Repository</a></li>
+        <li><a href="{{ "/support" | relative_url }}">Support & Sponsorship</a></li>
+      </ul>
+    </div>
+    
+    <div class="nav-section">
+      <div class="nav-section-title">Tutorials</div>
+      <ul class="nav-list">
+        <li><a href="{{ "/tutorials" | relative_url }}#1-first-health-check">1. First Health Check</a></li>
+        <li><a href="{{ "/tutorials" | relative_url }}#2-performance-troubleshooting">2. Performance Troubleshooting</a></li>
+        <li><a href="{{ "/tutorials" | relative_url }}#3-ai-powered-analysis">3. AI-Powered Analysis</a></li>
+        <li><a href="{{ "/tutorials" | relative_url }}#4-incident-response-workflow">4. Incident Response</a></li>
+        <li><a href="{{ "/tutorials" | relative_url }}#5-capacity-planning">5. Capacity Planning</a></li>
+        <li><a href="{{ "/tutorials" | relative_url }}#6-security-audit">6. Security Audit</a></li>
+        <li><a href="{{ "/tutorials" | relative_url }}#7-multi-environment-comparison">7. Multi-Environment</a></li>
+      </ul>
+    </div>
+    
+    <div class="nav-section">
+      <div class="nav-section-title">How-To's</div>
+      <ul class="nav-list">
+        <li><a href="{{ "/examples" | relative_url }}">Examples by category</a></li>
+        <li><a href="{{ "/how-to" | relative_url }}">Quick solutions</a></li>
+        <li><a href="{{ "/tutorials" | relative_url }}#9-cicd-integration">CI/CD Integration</a></li>
+        <li><a href="{{ "/tutorials" | relative_url }}#10-monitoring-integration">Monitoring Integration</a></li>
+      </ul>
+    </div>
+    
+    <div class="nav-section">
+      <div class="nav-section-title">Commands</div>
+      <ul class="nav-list">
+        <li><a href="{{ "/api" | relative_url }}#scan---data-collection">scan</a></li>
+        <li><a href="{{ "/api" | relative_url }}#analyze---ai-powered-analysis">analyze</a></li>
+        <li><a href="{{ "/api" | relative_url }}#task---analysis-task-management">task</a></li>
+        <li><a href="{{ "/api" | relative_url }}#info---system-information">info</a></li>
+      </ul>
+    </div>
+    
+    <div class="nav-section">
+      <div class="nav-section-title">Analysis Tasks</div>
+      <ul class="nav-list">
+        <li><a href="{{ "/api" | relative_url }}#built-in-analysis-tasks">Performance tasks</a></li>
+        <li><a href="{{ "/api" | relative_url }}#built-in-analysis-tasks">Security tasks</a></li>
+        <li><a href="{{ "/api" | relative_url }}#built-in-analysis-tasks">Reliability tasks</a></li>
+        <li><a href="{{ "/tutorials" | relative_url }}#8-custom-analysis-tasks">Custom tasks</a></li>
+      </ul>
+    </div>
+    
+    <div class="nav-section">
+      <div class="nav-section-title">Reference</div>
+      <ul class="nav-list">
+        <li><a href="{{ "/api" | relative_url }}">CLI Reference</a></li>
+        <li><a href="{{ "/api" | relative_url }}#configuration-files">Configuration</a></li>
+        <li><a href="{{ "/api" | relative_url }}#troubleshooting-commands">Troubleshooting</a></li>
+        <li><a href="{{ "/api" | relative_url }}#integration-examples">Integration</a></li>
+      </ul>
+    </div>
+    
+    <div class="nav-section">
+      <div class="nav-section-title">Production Use</div>
+      <ul class="nav-list">
+        <li><a href="{{ "/examples" | relative_url }}#production-incident-examples">Incident Response</a></li>
+        <li><a href="{{ "/examples" | relative_url }}#performance-optimization-examples">Performance Optimization</a></li>
+        <li><a href="{{ "/examples" | relative_url }}#security-assessment-examples">Security Assessment</a></li>
+        <li><a href="{{ "/examples" | relative_url }}#capacity-planning-examples">Capacity Planning</a></li>
+        <li><a href="{{ "/examples" | relative_url }}#integration-examples">Monitoring Integration</a></li>
+      </ul>
+    </div>
+    
+    <div class="nav-section">
+      <div class="nav-section-title">Support</div>
+      <ul class="nav-list">
+        <li><a href="{{ "/support" | relative_url }}#community-support">Community Support</a></li>
+        <li><a href="{{ "/support" | relative_url }}#professional-support">Professional Support</a></li>
+        <li><a href="{{ "/support" | relative_url }}#contributing">Contributing</a></li>
+        <li><a href="https://github.com/softwaremill/kafkapilot/issues">Report Issues</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
