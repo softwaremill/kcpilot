@@ -1,0 +1,34 @@
+title: KafkaPilot
+description: CLI-first Kafka health diagnostics tool
+url: https://softwaremill.github.io
+baseurl: /kafkapilot
+
+# Theme
+theme: minima
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+kramdown:
+  input: GFM
+  syntax_highlighter: rouge
+
+# Plugins
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+
+# Navigation
+header_pages:
+  - quickstart.md
+  - installation.md
+  - tutorials.md
+  - how-to.md
+  - examples.md
+  - api.md
+  - support.md
+
+# Footer
+softwaremill:
+  url: https://softwaremill.com
+  text: SoftwareMill
