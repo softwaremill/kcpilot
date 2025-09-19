@@ -1,7 +1,6 @@
 use anyhow::Result;
 use std::collections::HashMap;
 use std::path::PathBuf;
-// No tracing needed for this basic parser module
 
 use super::types::{LogOutputInfo, LogFileLocation};
 
@@ -212,5 +211,176 @@ impl Log4jParser {
             let json_end = response.rfind('}').map(|pos| pos + 1)?;
             Some(response[json_start..json_end].to_string())
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_log4j_basic() {
+        let log4j_content = r#"
+log4j.appender.serverAppender=org.apache.log4j.RollingFileAppender
+log4j.appender.serverAppender.File=/var/log/kafka/server.log
+log4j.appender.controllerAppender=org.apache.log4j.RollingFileAppender
+log4j.appender.controllerAppender.File=/var/log/kafka/controller.log
+"#;
+        let env_vars = HashMap::new();
+
+        let result = Log4jParser::parse(log4j_content, &env_vars).unwrap();
+
+        assert_eq!(result.log_files.len(), 2);
+        assert_eq!(result.log_files[0].path, PathBuf::from("/var/log/kafka/server.log"));
+        assert_eq!(result.log_files[0].log_type, "server");
+        assert_eq!(result.log_files[0].appender_name, "serverAppender");
+        assert_eq!(result.log_files[1].path, PathBuf::from("/var/log/kafka/controller.log"));
+        assert_eq!(result.log_files[1].log_type, "controller");
+        assert!(!result.uses_stdout);
+        assert!(!result.uses_journald);
+    }
+
+    #[test]
+    fn test_parse_log4j_with_console() {
+        let log4j_content = r#"
+log4j.appender.console=org.apache.log4j.ConsoleAppender
+log4j.appender.serverAppender.File=/var/log/kafka/server.log
+"#;
+        let env_vars = HashMap::new();
+
+        let result = Log4jParser::parse(log4j_content, &env_vars).unwrap();
+
+        assert_eq!(result.log_files.len(), 1);
+        assert!(result.uses_stdout);
+        assert!(result.uses_journald);
+    }
+
+    #[test]
+    fn test_resolve_env_vars() {
+        let mut env_vars = HashMap::new();
+        env_vars.insert("LOG_DIR".to_string(), "/custom/log/path".to_string());
+        env_vars.insert("APP_NAME".to_string(), "myapp".to_string());
+
+        let path = "${LOG_DIR}/${APP_NAME}.log";
+        let resolved = Log4jParser::resolve_env_vars(path, &env_vars);
+        assert_eq!(resolved, "/custom/log/path/myapp.log");
+    }
+
+    #[test]
+    fn test_resolve_env_vars_kafka_defaults() {
+        let env_vars = HashMap::new();
+        let path = "${kafka.logs.dir}/server.log";
+        let resolved = Log4jParser::resolve_env_vars(path, &env_vars);
+        assert_eq!(resolved, "/opt/kafka/logs/server.log");
+    }
+
+    #[test]
+    fn test_determine_log_type() {
+        assert_eq!(Log4jParser::determine_log_type("/var/log/kafka/server.log"), "server");
+        assert_eq!(Log4jParser::determine_log_type("/var/log/kafka/controller.log"), "controller");
+        assert_eq!(Log4jParser::determine_log_type("/var/log/kafka/state-change.log"), "state-change");
+        assert_eq!(Log4jParser::determine_log_type("/var/log/kafka/request.log"), "request");
+        assert_eq!(Log4jParser::determine_log_type("/var/log/kafka/gc.log"), "gc");
+        assert_eq!(Log4jParser::determine_log_type("/var/log/kafka/custom.log"), "custom");
+    }
+
+    #[test]
+    fn test_extract_appender_name() {
+        let line = "log4j.appender.serverAppender.File=/var/log/kafka/server.log";
+        let name = Log4jParser::extract_appender_name(line);
+        assert_eq!(name, "serverAppender");
+
+        let line2 = "log4j2.appender.fileAppender.fileName=/opt/kafka/logs/kafka.log";
+        let name2 = Log4jParser::extract_appender_name(line2);
+        assert_eq!(name2, "fileAppender");
+
+        let line3 = "some.other.config=value";
+        let name3 = Log4jParser::extract_appender_name(line3);
+        assert_eq!(name3, "detected");
+    }
+
+    #[test]
+    fn test_parse_llm_response() {
+        let response = r#"
+{
+  "log_files": [
+    {
+      "path": "/var/log/kafka/server.log",
+      "log_type": "server",
+      "appender_name": "serverAppender"
+    },
+    {
+      "path": "/var/log/kafka/controller.log",
+      "log_type": "controller", 
+      "appender_name": "controllerAppender"
+    }
+  ],
+  "uses_stdout": false,
+  "uses_journald": false,
+  "analysis": "Found 2 log files configured"
+}
+"#;
+
+        let result = Log4jParser::parse_llm_response(response).unwrap();
+
+        assert_eq!(result.log_files.len(), 2);
+        assert_eq!(result.log_files[0].path, PathBuf::from("/var/log/kafka/server.log"));
+        assert_eq!(result.log_files[0].log_type, "server");
+        assert_eq!(result.log_files[0].appender_name, "serverAppender");
+        assert!(!result.uses_stdout);
+        assert!(!result.uses_journald);
+        assert_eq!(result.log4j_analysis, "Found 2 log files configured");
+    }
+
+    #[test]
+    fn test_parse_llm_response_with_code_block() {
+        let response = r#"
+Here's the analysis:
+
+```json
+{
+  "log_files": [
+    {
+      "path": "/opt/kafka/logs/server.log",
+      "log_type": "server",
+      "appender_name": "serverLog"
+    }
+  ],
+  "uses_stdout": true,
+  "uses_journald": true,
+  "analysis": "Console and file output detected"
+}
+```
+
+That's the result.
+"#;
+
+        let result = Log4jParser::parse_llm_response(response).unwrap();
+
+        assert_eq!(result.log_files.len(), 1);
+        assert_eq!(result.log_files[0].path, PathBuf::from("/opt/kafka/logs/server.log"));
+        assert!(result.uses_stdout);
+        assert!(result.uses_journald);
+    }
+
+    #[test]
+    fn test_extract_json_code_block() {
+        let response = "```json\n{\"test\": \"value\"}\n```";
+        let json = Log4jParser::extract_json(response).unwrap();
+        assert_eq!(json, "{\"test\": \"value\"}");
+    }
+
+    #[test]
+    fn test_extract_json_simple() {
+        let response = "Some text {\"log_files\": []} more text";
+        let json = Log4jParser::extract_json(response).unwrap();
+        assert_eq!(json, "{\"log_files\": []}");
+    }
+
+    #[test]
+    fn test_extract_json_nested() {
+        let response = r#"Text {"outer": {"log_files": [{"inner": "value"}]}} more"#;
+        let json = Log4jParser::extract_json(response).unwrap();
+        assert_eq!(json, r#"{"outer": {"log_files": [{"inner": "value"}]}}"#);
     }
 }

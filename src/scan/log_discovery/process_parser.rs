@@ -115,6 +115,11 @@ impl ProcessParser {
         let parts: Vec<&str> = cmdline.split_whitespace().collect();
         
         for part in &parts {
+            // Skip JVM parameters (starting with -D)
+            if part.starts_with("-D") {
+                continue;
+            }
+            
             if part.ends_with(".properties") || part.ends_with(".conf") {
                 config_paths.push(PathBuf::from(part));
             }
@@ -142,5 +147,92 @@ impl ProcessParser {
             }
         }
         None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_parse_process_info_success() {
+        let ps_output = "kafka     1234  5.0  2.0 8765432 123456 ?     Sl   10:30   1:23 java -Xms1G -Xmx1G -Dlog4j.configuration=/opt/kafka/config/log4j.properties kafka.Kafka /opt/kafka/config/server.properties";
+        
+        let result = ProcessParser::parse_process_info(ps_output).unwrap();
+        
+        assert_eq!(result.pid, 1234);
+        assert!(result.command_line.contains("kafka.Kafka"));
+        assert_eq!(result.config_paths.len(), 1); // Only server.properties is extracted as config path
+        assert!(result.config_paths.contains(&PathBuf::from("/opt/kafka/config/server.properties")));
+        // log4j.properties is in -D flag, not extracted as config path
+        assert_eq!(result.log4j_path, Some(PathBuf::from("/opt/kafka/config/log4j.properties")));
+    }
+
+    #[test]
+    fn test_parse_process_info_empty() {
+        let result = ProcessParser::parse_process_info("");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Empty ps output"));
+    }
+
+    #[test]
+    fn test_parse_process_info_invalid_format() {
+        let ps_output = "kafka 1234 short";
+        let result = ProcessParser::parse_process_info(ps_output);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid ps output format"));
+    }
+
+    #[test]
+    fn test_parse_process_info_invalid_pid() {
+        let ps_output = "kafka abc  5.0  2.0 8765432 123456 ?     Sl   10:30   1:23 java kafka.Kafka";
+        let result = ProcessParser::parse_process_info(ps_output);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Failed to parse PID"));
+    }
+
+    #[test]
+    fn test_extract_config_paths() {
+        let cmdline = "java -jar kafka.jar /opt/kafka/server.properties /etc/kafka/log4j.conf other-file.txt";
+        let paths = ProcessParser::extract_config_paths(cmdline);
+        
+        assert_eq!(paths.len(), 2);
+        assert_eq!(paths[0], PathBuf::from("/opt/kafka/server.properties"));
+        assert_eq!(paths[1], PathBuf::from("/etc/kafka/log4j.conf"));
+    }
+
+    #[test]
+    fn test_extract_config_paths_empty() {
+        let cmdline = "java -jar kafka.jar other-file.txt";
+        let paths = ProcessParser::extract_config_paths(cmdline);
+        assert!(paths.is_empty());
+    }
+
+    #[test]
+    fn test_extract_log4j_path_log4j_configuration() {
+        let cmdline = "java -Dlog4j.configuration=file:/opt/kafka/log4j.properties kafka.Kafka";
+        let path = ProcessParser::extract_log4j_path(cmdline);
+        assert_eq!(path, Some(PathBuf::from("/opt/kafka/log4j.properties")));
+    }
+
+    #[test]
+    fn test_extract_log4j_path_log4j2_configuration() {
+        let cmdline = "java -Dlog4j2.configurationFile=/opt/kafka/log4j2.xml kafka.Kafka";
+        let path = ProcessParser::extract_log4j_path(cmdline);
+        assert_eq!(path, Some(PathBuf::from("/opt/kafka/log4j2.xml")));
+    }
+
+    #[test]
+    fn test_extract_log4j_path_none() {
+        let cmdline = "java kafka.Kafka /opt/kafka/server.properties";
+        let path = ProcessParser::extract_log4j_path(cmdline);
+        assert_eq!(path, None);
+    }
+
+    #[test]
+    fn test_extract_log4j_path_file_prefix() {
+        let cmdline = "java -Dlog4j.configuration=file:/var/log/kafka/log4j.properties kafka.Kafka";
+        let path = ProcessParser::extract_log4j_path(cmdline);
+        assert_eq!(path, Some(PathBuf::from("/var/log/kafka/log4j.properties")));
     }
 }

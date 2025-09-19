@@ -66,5 +66,6 @@ async-openai = "0.29"
 
 [dev-dependencies]
 tempfile = "3.8"
+serial_test = "3.0"
 
 

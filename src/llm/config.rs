@@ -44,8 +44,20 @@ impl Default for LlmConfig {
 impl LlmConfig {
     /// Load configuration from environment variables
     pub fn from_env() -> Result<Self, String> {
-        // Load .env file if it exists
-        let _ = dotenv::dotenv();
+        Self::from_env_internal(true)
+    }
+    
+    /// Load configuration from environment variables with optional dotenv loading
+    #[cfg(test)]
+    fn from_env_no_dotenv() -> Result<Self, String> {
+        Self::from_env_internal(false)
+    }
+    
+    fn from_env_internal(load_dotenv: bool) -> Result<Self, String> {
+        // Load .env file if it exists and not disabled
+        if load_dotenv {
+            let _ = dotenv::dotenv();
+        }
         
         let api_key = env::var("OPENAI_API_KEY")
             .map_err(|_| "OPENAI_API_KEY not found in environment. Please set it in .env file or environment variables.")?;
@@ -126,5 +138,226 @@ impl LlmConfig {
         }
         
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::env;
+    use serial_test::serial;
+
+    #[test]
+    fn test_default_config() {
+        let config = LlmConfig::default();
+        
+        assert_eq!(config.api_key, "");
+        assert_eq!(config.model, "gpt-4o");
+        assert_eq!(config.api_base, None);
+        assert_eq!(config.timeout_secs, 300);
+        assert_eq!(config.max_tokens, 8000);
+        assert_eq!(config.temperature, 0.3);
+        assert!(!config.debug);
+    }
+
+    #[test]
+    fn test_validate_success() {
+        let config = LlmConfig {
+            api_key: "test-key".to_string(),
+            model: "gpt-4".to_string(),
+            api_base: None,
+            timeout_secs: 60,
+            max_tokens: 1000,
+            temperature: 0.5,
+            debug: false,
+        };
+
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_validate_empty_api_key() {
+        let config = LlmConfig {
+            api_key: "".to_string(),
+            ..Default::default()
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("API key is empty"));
+    }
+
+    #[test]
+    fn test_validate_invalid_temperature() {
+        let config = LlmConfig {
+            api_key: "test-key".to_string(),
+            temperature: 1.5,
+            ..Default::default()
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Temperature must be between"));
+    }
+
+    #[test]
+    fn test_validate_zero_max_tokens() {
+        let config = LlmConfig {
+            api_key: "test-key".to_string(),
+            max_tokens: 0,
+            ..Default::default()
+        };
+
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("Max tokens must be greater than 0"));
+    }
+
+    fn setup_clean_env() {
+        env::remove_var("OPENAI_API_KEY");
+        env::remove_var("OPENAI_MODEL");
+        env::remove_var("OPENAI_API_BASE");
+        env::remove_var("LLM_REQUEST_TIMEOUT");
+        env::remove_var("LLM_MAX_TOKENS");
+        env::remove_var("LLM_TEMPERATURE");
+        env::remove_var("LLM_DEBUG");
+    }
+
+    #[test]
+    #[serial]
+    fn test_from_env_missing_api_key() {
+        setup_clean_env();
+        
+        let result = LlmConfig::from_env_no_dotenv();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().contains("OPENAI_API_KEY not found"));
+    }
+
+    #[test]
+    #[serial]
+    fn test_from_env_with_api_key() {
+        setup_clean_env();
+        
+        // Set required environment variable
+        env::set_var("OPENAI_API_KEY", "test-api-key");
+        
+        let result = LlmConfig::from_env_no_dotenv();
+        assert!(result.is_ok());
+        
+        let config = result.unwrap();
+        assert_eq!(config.api_key, "test-api-key");
+        assert_eq!(config.model, "gpt-4o"); // default
+        
+        setup_clean_env();
+    }
+
+    #[test]
+    #[serial]
+    fn test_from_env_with_overrides() {
+        setup_clean_env();
+        
+        // Set environment variables
+        env::set_var("OPENAI_API_KEY", "test-key");
+        env::set_var("OPENAI_MODEL", "gpt-3.5-turbo");
+        env::set_var("OPENAI_API_BASE", "https://custom.api.com");
+        env::set_var("LLM_REQUEST_TIMEOUT", "120");
+        env::set_var("LLM_MAX_TOKENS", "2000");
+        env::set_var("LLM_TEMPERATURE", "0.7");
+        env::set_var("LLM_DEBUG", "true");
+        
+        let result = LlmConfig::from_env_no_dotenv();
+        assert!(result.is_ok());
+        
+        let config = result.unwrap();
+        assert_eq!(config.api_key, "test-key");
+        assert_eq!(config.model, "gpt-3.5-turbo");
+        assert_eq!(config.api_base, Some("https://custom.api.com".to_string()));
+        assert_eq!(config.timeout_secs, 120);
+        assert_eq!(config.max_tokens, 2000);
+        assert_eq!(config.temperature, 0.7);
+        assert!(config.debug);
+        
+        setup_clean_env();
+    }
+
+    #[test]
+    #[serial]
+    fn test_from_env_invalid_numeric_values() {
+        setup_clean_env();
+        
+        env::set_var("OPENAI_API_KEY", "test-key");
+        env::set_var("LLM_REQUEST_TIMEOUT", "invalid");
+        env::set_var("LLM_MAX_TOKENS", "not-a-number");
+        env::set_var("LLM_TEMPERATURE", "invalid-temp");
+        
+        let result = LlmConfig::from_env_no_dotenv();
+        assert!(result.is_ok());
+        
+        let config = result.unwrap();
+        // Should fall back to defaults for invalid values
+        assert_eq!(config.timeout_secs, 300);
+        assert_eq!(config.max_tokens, 8000);
+        assert_eq!(config.temperature, 0.3);
+        
+        setup_clean_env();
+    }
+
+    #[test]
+    #[serial]
+    fn test_debug_flag_parsing() {
+        setup_clean_env();
+        env::set_var("OPENAI_API_KEY", "test-key");
+        
+        // Test "true"
+        env::remove_var("LLM_DEBUG");
+        env::set_var("LLM_DEBUG", "true");
+        let config = LlmConfig::from_env_no_dotenv().unwrap();
+        assert!(config.debug);
+        
+        // Test "1"
+        env::remove_var("LLM_DEBUG");
+        env::set_var("LLM_DEBUG", "1");
+        let config = LlmConfig::from_env_no_dotenv().unwrap();
+        assert!(config.debug);
+        
+        // Test "false"
+        env::remove_var("LLM_DEBUG");
+        env::set_var("LLM_DEBUG", "false");
+        let config = LlmConfig::from_env_no_dotenv().unwrap();
+        assert!(!config.debug);
+        
+        // Test "0"
+        env::remove_var("LLM_DEBUG");
+        env::set_var("LLM_DEBUG", "0");
+        let config = LlmConfig::from_env_no_dotenv().unwrap();
+        assert!(!config.debug);
+        
+        setup_clean_env();
+    }
+
+    #[test]
+    #[serial]
+    fn test_temperature_bounds() {
+        setup_clean_env();
+        env::set_var("OPENAI_API_KEY", "test-key");
+        
+        // Test out of bounds temperature (should use default)
+        env::set_var("LLM_TEMPERATURE", "1.5");
+        let config = LlmConfig::from_env_no_dotenv().unwrap();
+        assert_eq!(config.temperature, 0.3); // Should use default
+        
+        // Test negative temperature (should use default)
+        env::remove_var("LLM_TEMPERATURE");
+        env::set_var("LLM_TEMPERATURE", "-0.1");
+        let config = LlmConfig::from_env_no_dotenv().unwrap();
+        assert_eq!(config.temperature, 0.3); // Should use default
+        
+        // Test valid temperature
+        env::remove_var("LLM_TEMPERATURE");
+        env::set_var("LLM_TEMPERATURE", "0.8");
+        let config = LlmConfig::from_env_no_dotenv().unwrap();
+        assert_eq!(config.temperature, 0.8);
+        
+        setup_clean_env();
     }
 }

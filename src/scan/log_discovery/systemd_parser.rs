@@ -136,3 +136,112 @@ impl SystemdParser {
         vars
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_extract_service_name_success() {
+        let status_output = "● kafka.service - Apache Kafka Server\n   Loaded: loaded (/etc/systemd/system/kafka.service; enabled; vendor preset: enabled)";
+        let result = SystemdParser::extract_service_name(status_output).unwrap();
+        assert_eq!(result, "kafka.service");
+    }
+
+    #[test]
+    fn test_extract_service_name_different_format() {
+        let status_output = "● confluent-kafka.service - Confluent Kafka\n   Loaded: loaded";
+        let result = SystemdParser::extract_service_name(status_output).unwrap();
+        assert_eq!(result, "confluent-kafka.service");
+    }
+
+    #[test]
+    fn test_extract_service_name_empty() {
+        let result = SystemdParser::extract_service_name("");
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Empty systemctl status output"));
+    }
+
+    #[test]
+    fn test_extract_service_name_no_dash() {
+        let status_output = "● kafka.service no dash here";
+        let result = SystemdParser::extract_service_name(status_output);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Could not parse service name"));
+    }
+
+    #[test]
+    fn test_parse_service_content() {
+        let content = r#"
+[Unit]
+Description=Apache Kafka
+After=network.target
+
+[Service]
+Type=forking
+User=kafka
+Group=kafka
+EnvironmentFile=/etc/kafka/kafka.env
+Environment=KAFKA_HEAP_OPTS="-Xmx1G -Xms1G"
+Environment=KAFKA_LOG_DIR="/var/log/kafka"
+ExecStart=/opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/server.properties
+ExecStop=/opt/kafka/bin/kafka-server-stop.sh
+
+[Install]
+WantedBy=multi-user.target
+"#;
+
+        let (env_file, env_vars, exec_start) = SystemdParser::parse_service_content(content);
+
+        assert_eq!(env_file, Some(PathBuf::from("/etc/kafka/kafka.env")));
+        assert_eq!(env_vars.get("KAFKA_HEAP_OPTS"), Some(&"-Xmx1G -Xms1G".to_string()));
+        assert_eq!(env_vars.get("KAFKA_LOG_DIR"), Some(&"/var/log/kafka".to_string()));
+        assert_eq!(exec_start, Some("/opt/kafka/bin/kafka-server-start.sh /opt/kafka/config/server.properties".to_string()));
+    }
+
+    #[test]
+    fn test_parse_service_content_minimal() {
+        let content = "[Service]\nExecStart=/usr/bin/kafka";
+        let (env_file, env_vars, exec_start) = SystemdParser::parse_service_content(content);
+
+        assert_eq!(env_file, None);
+        assert!(env_vars.is_empty());
+        assert_eq!(exec_start, Some("/usr/bin/kafka".to_string()));
+    }
+
+    #[test]
+    fn test_parse_environment_file() {
+        let content = r#"
+# Kafka environment variables
+KAFKA_HOME=/opt/kafka
+KAFKA_LOG_DIR="/var/log/kafka"
+KAFKA_USER='kafka'
+JAVA_HOME=/usr/lib/jvm/java-11
+
+# Comment line
+EMPTY_VALUE=
+"#;
+
+        let vars = SystemdParser::parse_environment_file(content);
+
+        assert_eq!(vars.get("KAFKA_HOME"), Some(&"/opt/kafka".to_string()));
+        assert_eq!(vars.get("KAFKA_LOG_DIR"), Some(&"/var/log/kafka".to_string()));
+        assert_eq!(vars.get("KAFKA_USER"), Some(&"kafka".to_string()));
+        assert_eq!(vars.get("JAVA_HOME"), Some(&"/usr/lib/jvm/java-11".to_string()));
+        assert_eq!(vars.get("EMPTY_VALUE"), Some(&"".to_string()));
+        assert!(!vars.contains_key("# Comment line"));
+    }
+
+    #[test]
+    fn test_parse_environment_file_empty() {
+        let vars = SystemdParser::parse_environment_file("");
+        assert!(vars.is_empty());
+    }
+
+    #[test]
+    fn test_parse_environment_file_comments_only() {
+        let content = "# Just comments\n# Another comment\n";
+        let vars = SystemdParser::parse_environment_file(content);
+        assert!(vars.is_empty());
+    }
+}
