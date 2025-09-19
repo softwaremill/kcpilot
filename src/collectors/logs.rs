@@ -1,5 +1,5 @@
 use super::{Collector, CollectorError, CollectorResult, KafkaConfig};
-use crate::scan::log_discovery::LogDiscovery;
+// LogDiscovery is no longer needed - we use EnhancedLogDiscovery in the scan module
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -254,35 +254,10 @@ impl Collector for LogCollector {
             // Use collector's default paths
             &self.log_paths  
         } else {
-            // Use dynamic discovery
-            info!("Using dynamic log discovery");
+            // Use hardcoded fallback paths (LogDiscovery has been refactored)
+            info!("Using fallback log paths");
             
-            let log_discovery = LogDiscovery::new(None);
-            default_paths = match log_discovery.discover_logs().await {
-                Ok(discovered_logs) => {
-                    info!("Dynamic discovery found {} log files", discovered_logs.log_files.len());
-                    
-                    // Extract accessible log paths
-                    let mut paths = Vec::new();
-                    for (path_str, log_info) in &discovered_logs.log_files {
-                        if log_info.accessible {
-                            paths.push(PathBuf::from(path_str));
-                        }
-                    }
-                    
-                    if paths.is_empty() {
-                        warn!("No accessible logs found via dynamic discovery, using fallback");
-                        Self::default_log_paths()
-                    } else {
-                        paths
-                    }
-                }
-                Err(e) => {
-                    warn!("Dynamic log discovery failed: {}, using fallback", e);
-                    Self::default_log_paths()
-                }
-            };
-            
+            default_paths = Self::default_log_paths();
             &default_paths
         };
         
