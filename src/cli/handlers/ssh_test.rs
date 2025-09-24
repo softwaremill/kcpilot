@@ -21,7 +21,6 @@ pub async fn handle_ssh_test_command(bastion: Option<String>) -> Result<()> {
                 &BrokerInfo {
                     id: 0,
                     hostname: "localhost".to_string(),
-                    datacenter: "unknown".to_string(),
                 }
             };
             
@@ -37,7 +36,7 @@ pub async fn handle_ssh_test_command(bastion: Option<String>) -> Result<()> {
     println!("{}", "─".repeat(50));
 
     for broker in &scanner.config.brokers {
-        print!("• {} ({}): ", broker.hostname, broker.datacenter);
+        print!("• {}: ", broker.hostname);
         let accessible = test_broker_access(scanner.config.bastion_alias.as_ref(), broker).await;
         if accessible {
             println!("✅ Connected");

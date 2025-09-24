@@ -3,7 +3,6 @@ use tracing::{debug, info};
 
 use crate::scan::types::BrokerInfo;
 use crate::scan::bastion::run_command_on_bastion;
-use crate::scan::utils::infer_datacenter;
 use crate::collectors::admin::AdminCollector;
 use crate::collectors::{KafkaConfig, Collector};
 
@@ -24,7 +23,7 @@ pub async fn discover_brokers_from_kafkactl(bastion_alias: Option<&String>) -> R
             
             info!("✅ Successfully discovered {} brokers from kafkactl:", discovered_brokers.len());
             for broker in &discovered_brokers {
-                info!("   • Broker {} - {} ({})", broker.id, broker.hostname, broker.datacenter);
+                info!("   • Broker {} - {}", broker.id, broker.hostname);
             }
             
             Ok(discovered_brokers)
@@ -61,7 +60,6 @@ pub fn parse_kafkactl_brokers(yaml_output: &str) -> Result<Vec<BrokerInfo>> {
                     current_broker = Some(BrokerInfo {
                         id,
                         hostname: String::new(),
-                        datacenter: "unknown".to_string(),
                     });
                     in_broker_section = true;
                 }
@@ -81,10 +79,6 @@ pub fn parse_kafkactl_brokers(yaml_output: &str) -> Result<Vec<BrokerInfo>> {
                         address
                     };
                     current_broker.as_mut().unwrap().hostname = hostname.to_string();
-                    
-                    // Try to infer datacenter from hostname pattern
-                    let datacenter = infer_datacenter(hostname);
-                    current_broker.as_mut().unwrap().datacenter = datacenter;
                 }
             } else if line.starts_with("port:") || line.starts_with("rack:") {
                 // Additional fields we might want to capture later
@@ -127,7 +121,6 @@ pub async fn discover_brokers_from_single_local(broker_address: &str) -> Result<
                 .map(|b| BrokerInfo {
                     id: b.id,
                     hostname: b.host,
-                    datacenter: "unknown".to_string(), // We don't have datacenter info from admin API
                 })
                 .collect();
             
@@ -183,13 +176,9 @@ pub async fn discover_brokers_using_installation_path(bastion_alias: Option<&Str
             // Expected format: hostname:port
             let hostname = line.split(':').next().unwrap_or(line).to_string();
             
-            // Try to infer datacenter from hostname pattern
-            let datacenter = infer_datacenter(&hostname);
-            
             discovered_brokers.push(BrokerInfo {
                 id: broker_id,
                 hostname,
-                datacenter,
             });
             broker_id += 1;
         }
@@ -198,7 +187,7 @@ pub async fn discover_brokers_using_installation_path(bastion_alias: Option<&Str
     if !discovered_brokers.is_empty() {
         info!("✅ Successfully discovered {} brokers:", discovered_brokers.len());
         for broker in &discovered_brokers {
-            info!("   • Broker {} - {} ({})", broker.id, broker.hostname, broker.datacenter);
+            info!("   • Broker {} - {}", broker.id, broker.hostname);
         }
     } else {
         info!("⚠️  No brokers discovered using installation path method");
@@ -341,7 +330,6 @@ pub async fn discover_brokers_with_api_versions(bastion_alias: Option<&String>, 
                 Ok(vec![BrokerInfo {
                     id: 0, // Will be determined later during data collection
                     hostname,
-                    datacenter: "unknown".to_string(),
                 }])
             } else {
                 Ok(Vec::new())
@@ -374,7 +362,6 @@ fn parse_metadata_shell_broker_line(line: &str) -> Option<BrokerInfo> {
                     return Some(BrokerInfo {
                         id,
                         hostname,
-                        datacenter: "unknown".to_string(),
                     });
                 }
             }

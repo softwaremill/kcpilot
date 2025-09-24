@@ -288,7 +288,6 @@ impl BrokerCollector {
         let broker_info_json = serde_json::json!({
             "id": self.broker.id,
             "hostname": self.broker.hostname,
-            "datacenter": self.broker.datacenter,
             "collection_timestamp": chrono::Utc::now().to_rfc3339(),
         });
         fs::write(
@@ -651,7 +650,6 @@ impl BrokerCollector {
         Ok(BrokerData {
             broker_id: self.broker.id,
             hostname: self.broker.hostname.clone(),
-            datacenter: self.broker.datacenter.clone(),
             accessible: true,
             system_info,
             configs,

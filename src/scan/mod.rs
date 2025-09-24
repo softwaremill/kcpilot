@@ -19,7 +19,6 @@ pub use types::{
     ScanConfig, BrokerInfo, ScanMetadata, ScanResult, 
     ClusterData, BrokerData, CollectionStats
 };
-pub use utils::infer_datacenter;
 pub use scanner::Scanner;
 pub use cluster_detection::detect_cluster_mode;
 

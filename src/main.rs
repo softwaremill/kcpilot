@@ -6,13 +6,10 @@ use kafkapilot::cli::utils::{init_logging, print_info};
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Parse CLI arguments
     let cli = Cli::parse();
 
-    // Initialize logging
     init_logging(cli.verbose, &cli.log_format);
 
-    // Execute command
     match cli.command {
         Commands::Scan {
             bastion,

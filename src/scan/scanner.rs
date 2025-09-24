@@ -211,8 +211,7 @@ impl Scanner {
         info!("All discovery methods failed, falling back to single broker configuration");
         let fallback_brokers = vec![BrokerInfo {
             id: 0, // Unknown ID, will be determined during data collection
-            hostname: broker_address.split(':').next().unwrap_or("unknown").to_string(),  
-            datacenter: "unknown".to_string(),
+            hostname: broker_address.split(':').next().unwrap_or("unknown").to_string(),
         }];
         
         self.config.brokers = fallback_brokers;
@@ -326,7 +325,7 @@ impl Scanner {
         println!("Testing broker access ({}):", connect_method);
         
         for broker in &self.config.brokers {
-            print!("  • Broker {} ({})... ", broker.id, broker.datacenter);
+            print!("  • Broker {}... ", broker.id);
             
             if test_broker_access(self.config.bastion_alias.as_ref(), broker).await {
                 println!("✅ Accessible");
@@ -377,8 +376,8 @@ impl Scanner {
             println!();
             
             for broker in accessible_brokers.iter() {
-                println!("🔍 Processing Broker {} ({} in {})...", 
-                    broker.id, broker.hostname, broker.datacenter);
+                println!("🔍 Processing Broker {} ({})...", 
+                    broker.id, broker.hostname);
                 println!("────────────────────────────────────────");
                 
                 let broker_collector = BrokerCollector::new(

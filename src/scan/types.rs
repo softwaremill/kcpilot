@@ -15,7 +15,6 @@ pub struct ScanConfig {
 pub struct BrokerInfo {
     pub id: i32,
     pub hostname: String,
-    pub datacenter: String,
 }
 
 /// Metadata about a scan operation
@@ -54,7 +53,6 @@ pub struct ClusterData {
 pub struct BrokerData {
     pub broker_id: i32,
     pub hostname: String,
-    pub datacenter: String,
     pub accessible: bool,
     pub system_info: HashMap<String, String>,
     pub configs: HashMap<String, String>,

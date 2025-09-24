@@ -246,7 +246,6 @@ pub async fn discover_brokers_with_bastion_admin_client(bastion_alias: Option<&S
                 return Ok(vec![BrokerInfo {
                     id: 0, // Will be determined during data collection
                     hostname,
-                    datacenter: "unknown".to_string(),
                 }]);
             }
         }
@@ -269,7 +268,6 @@ pub async fn discover_brokers_with_bastion_admin_client(bastion_alias: Option<&S
                 return Ok(vec![BrokerInfo {
                     id: 0, // Will be determined during data collection
                     hostname,
-                    datacenter: "unknown".to_string(),
                 }]);
             }
         }
@@ -292,7 +290,6 @@ pub async fn discover_brokers_with_bastion_admin_client(bastion_alias: Option<&S
                 return Ok(vec![BrokerInfo {
                     id: 0, // Will be determined during data collection
                     hostname,
-                    datacenter: "unknown".to_string(),
                 }]);
             }
         }
