@@ -1,12 +1,15 @@
 # KafkaPilot
 
-A CLI-first Kafka health diagnostics tool that automatically collects cluster signals, identifies issues, and provides actionable remediation guidance.
+A CLI-first Kafka health diagnostics tool that automatically collects cluster signals, identifies issues, and provides actionable remediation guidance. KafkaPilot combines SSH-based data collection with AI-powered analysis using LLM integration.
 
 ## Features
 
 - **SSH-based data collection** - Collects comprehensive cluster data through SSH bastion hosts
+- **AI-powered analysis** - Uses LLMs to analyze collected data and identify issues
+- **Configurable analysis tasks** - YAML-defined analysis prompts for customizable diagnostics
+- **Per-broker analysis** - Intelligent chunking to handle large clusters without token limits
 - **Zero configuration** - Works with standard SSH config aliases
-- **Comprehensive data gathering** - Configs, logs, metrics, system info from all brokers
+- **Multiple output formats** - Terminal, JSON, and Markdown reports
 - **Organized output** - Timestamped directories with structured data organization
 - **Summary reports** - Automatic generation of collection summaries
 
@@ -19,15 +22,42 @@ cargo build --release
 # The binary will be available at target/release/kafkapilot
 ```
 
-## Running from Source
+## Environment Configuration
+
+### Required Environment Variables
+```bash
+# For AI-powered analysis (required for LLM features)
+export OPENAI_API_KEY=your_openai_api_key_here
+# Alternative LLM API key
+export LLM_API_KEY=your_alternative_llm_api_key
+
+# Optional LLM debugging
+export LLM_DEBUG=true
+```
+
+## Quick Start
 
 You can run KafkaPilot directly from source using `cargo run`:
 
 ```bash
-# Run locally on bastion (no SSH required)
+# 1. Scan a cluster (data collection)
+cargo run --bin kafkapilot -- scan --bastion kafka-poligon --output test-scan
+
+# 2. Analyze the collected data with AI
+cargo run --bin kafkapilot -- analyze ./test-scan --report terminal
+
+# 3. Generate markdown report
+cargo run --bin kafkapilot -- analyze ./test-scan --report markdown --output report.md
+```
+
+## Commands Overview
+
+### Data Collection
+```bash
+# Scan locally on bastion (no SSH required)
 cargo run --bin kafkapilot -- scan
 
-# Run remotely via SSH bastion
+# Scan remotely via SSH bastion
 cargo run --bin kafkapilot -- scan --bastion kafka-poligon
 
 # Specify custom output directory
@@ -35,20 +65,60 @@ cargo run --bin kafkapilot -- scan --bastion kafka-poligon --output test-scan
 
 # Run with verbose logging
 RUST_LOG=kafkapilot=debug cargo run --bin kafkapilot -- scan --bastion kafka-poligon
+```
+
+### Analysis
+```bash
+# Analyze collected data (terminal output)
+cargo run --bin kafkapilot -- analyze ./test-scan
+
+# Generate JSON report
+cargo run --bin kafkapilot -- analyze ./test-scan --report json --output findings.json
+
+# Generate markdown report
+cargo run --bin kafkapilot -- analyze ./test-scan --report markdown --output report.md
+
+# Enable LLM debug logging
+cargo run --bin kafkapilot -- analyze ./test-scan --llmdbg
+
+# Custom LLM timeout (default: 300s)
+cargo run --bin kafkapilot -- analyze ./test-scan --llm-timeout 600
+```
+
+### Analysis Task Management
+```bash
+# List all available analysis tasks
+cargo run --bin kafkapilot -- task list
+
+# List tasks with detailed information
+cargo run --bin kafkapilot -- task list --detailed
+
+# Test a specific analysis task
+cargo run --bin kafkapilot -- task test recent_log_errors ./test-scan
+
+# Show details of a specific task
+cargo run --bin kafkapilot -- task show recent_log_errors
+
+# Create new analysis task from template
+cargo run --bin kafkapilot -- task new --id custom-task --name "My Custom Analysis"
+```
+
+### Utility Commands
+```bash
+# Test SSH connectivity to brokers
+cargo run --bin kafkapilot -- test-ssh --bastion kafka-poligon
+
+# Show configuration
+cargo run --bin kafkapilot -- config
 
 # Show help
 cargo run --bin kafkapilot -- --help
-
-# Show scan command help
-cargo run --bin kafkapilot -- scan --help
 
 # Show version and info
 cargo run --bin kafkapilot -- info
 ```
 
-## Usage
-
-### Using the Compiled Binary
+## Using the Compiled Binary
 
 After building with `cargo build --release`, you can use the binary directly:
 
@@ -56,17 +126,12 @@ After building with `cargo build --release`, you can use the binary directly:
 # Add to PATH (optional)
 export PATH="$PATH:$(pwd)/target/release"
 
-# Scan locally (when running directly on the bastion)
-kafkapilot scan
+# Complete workflow: scan + analyze
+kafkapilot scan --bastion kafka-poligon --output my-cluster-scan
+kafkapilot analyze ./my-cluster-scan --report terminal
 
-# Scan remotely via SSH bastion (from your local machine)
-kafkapilot scan --bastion kafka-poligon
-
-# Scan with custom bastion from ~/.ssh/config
-kafkapilot scan --bastion my-kafka-bastion
-
-# Specify output directory
-kafkapilot scan --output /path/to/output
+# Generate reports
+kafkapilot analyze ./my-cluster-scan --report markdown --output cluster-report.md
 ```
 
 ### Prerequisites
@@ -130,9 +195,68 @@ kafka-scan-TIMESTAMP/
 - System information (CPU, memory, disk)
 - Java/JVM information and metrics
 - Configuration files (server.properties, log4j, etc.)
-- Log files (server.log, controller.log, journald)
+- **Enhanced log collection** - Dynamically discovers log files from any Kafka deployment:
+  - Automatic process discovery and service analysis
+  - AI-powered log4j configuration parsing
+  - Both file-based logs and systemd journal logs
+  - Works with any log directory structure
 - Data directory information and sizes
 - Network connections and ports
+
+## Analysis Tasks System
+
+KafkaPilot uses a sophisticated analysis system powered by YAML-defined tasks that leverage AI for intelligent cluster diagnostics.
+
+### Built-in Analysis Tasks
+
+- **Recent Log Error Detection** - Scans broker logs for ERROR/FATAL messages and connectivity issues
+- **JVM Heap Configuration** - Validates heap size settings and memory allocation
+- **Thread Configuration** - Checks broker thread pool settings
+- **Authentication & Authorization** - Verifies security configuration
+- **High Availability Checks** - Ensures proper HA setup (broker count, ISR, etc.)
+- **Network Configuration** - Validates listener and encryption settings
+- **And many more...**
+
+### Creating Custom Tasks
+
+Create custom analysis tasks by adding YAML files to the `analysis_tasks/` directory:
+
+```yaml
+id: my_custom_check
+name: My Custom Analysis
+description: Custom analysis for specific requirements
+category: performance
+
+prompt: |
+  Analyze the Kafka configuration and logs for custom requirements:
+  Configuration: {config}
+  Logs: {logs}
+  
+  Look for specific patterns and provide recommendations.
+
+include_data:
+  - config
+  - logs
+
+# For large clusters, enable per-broker analysis to avoid token limits
+per_broker_analysis: true
+max_tokens_per_request: 80000
+
+severity_keywords:
+  "critical issue": "high"
+  "minor issue": "low"
+
+default_severity: medium
+enabled: true
+```
+
+### Per-Broker Analysis
+
+For large clusters that exceed LLM token limits, KafkaPilot automatically:
+- Processes each broker individually when `per_broker_analysis: true`
+- Filters data to only include relevant information (logs + configs for log analysis)
+- Combines findings from all brokers into a comprehensive report
+- Handles any cluster size without token limit errors
 
 ## Commercial Support
 
