@@ -69,6 +69,11 @@ impl AiExecutor {
     pub async fn execute_task(&self, task: &AnalysisTask, snapshot: &Snapshot) -> Result<Vec<Finding>> {
         debug!("Executing task: {} ({})", task.name, task.id);
         
+        // Check if we need per-broker processing
+        if task.per_broker_analysis {
+            return self.execute_task_per_broker(task, snapshot).await;
+        }
+        
         // Build the prompt with available data
         let prompt = self.build_prompt(task, snapshot)?;
         
@@ -79,8 +84,15 @@ impl AiExecutor {
             prompt
         };
         
+        // Check token count and warn if too large
+        let estimated_tokens = self.estimate_tokens(&full_prompt);
+        if estimated_tokens > task.max_tokens_per_request {
+            warn!("Task '{}' prompt estimated at {} tokens, exceeds limit of {}. Consider enabling per_broker_analysis.",
+                  task.name, estimated_tokens, task.max_tokens_per_request);
+        }
+        
         // Call the LLM
-        debug!("Sending prompt to LLM (length: {} chars)", full_prompt.len());
+        debug!("Sending prompt to LLM (length: {} chars, ~{} tokens)", full_prompt.len(), estimated_tokens);
         
         let response = self.llm_service.chat(vec![
             crate::llm::service::ChatMessage::system(
@@ -96,6 +108,143 @@ impl AiExecutor {
         self.parse_findings(&response, task)
     }
     
+    /// Execute a task per broker to avoid token limits
+    async fn execute_task_per_broker(&self, task: &AnalysisTask, snapshot: &Snapshot) -> Result<Vec<Finding>> {
+        debug!("Executing task per broker: {} ({})", task.name, task.id);
+        
+        let mut all_findings = Vec::new();
+        
+        // Get broker information from scan data stored in collectors.custom
+        let broker_names = if let Some(brokers_data) = snapshot.collectors.custom.get("brokers") {
+            if let Some(brokers_obj) = brokers_data.as_object() {
+                brokers_obj.keys().collect::<Vec<_>>()
+            } else {
+                vec![]
+            }
+        } else {
+            vec![]
+        };
+        
+        if broker_names.is_empty() {
+            warn!("No broker data found for per-broker analysis, falling back to regular analysis");
+            return self.execute_single_prompt(task, snapshot, "all-brokers").await;
+        }
+        
+        info!("Processing {} brokers individually for task '{}'", broker_names.len(), task.name);
+        
+        // Process each broker individually
+        for (broker_idx, broker_name) in broker_names.iter().enumerate() {
+            debug!("Processing broker {} ({}/{})", broker_name, broker_idx + 1, broker_names.len());
+            
+            // Create a modified snapshot with only this broker's data
+            let broker_snapshot = self.create_broker_snapshot(snapshot, broker_name)?;
+            
+            // Execute the task for this broker
+            match self.execute_single_prompt(task, &broker_snapshot, broker_name).await {
+                Ok(mut findings) => {
+                    // Add broker context to findings
+                    for finding in &mut findings {
+                        finding.title = format!("{}: {}", broker_name, finding.title);
+                    }
+                    all_findings.extend(findings);
+                }
+                Err(e) => {
+                    warn!("Failed to analyze broker {}: {}", broker_name, e);
+                }
+            }
+        }
+        
+        info!("Per-broker analysis complete. Total findings: {}", all_findings.len());
+        Ok(all_findings)
+    }
+    
+    /// Execute a single prompt (used by both regular and per-broker analysis)
+    async fn execute_single_prompt(&self, task: &AnalysisTask, snapshot: &Snapshot, context: &str) -> Result<Vec<Finding>> {
+        // Build the prompt with available data
+        let prompt = self.build_prompt(task, snapshot)?;
+        
+        // Add examples if provided
+        let full_prompt = if let Some(examples) = &task.examples {
+            format!("{}\n\nExamples:\n{}", prompt, examples)
+        } else {
+            prompt
+        };
+        
+        // Check token count
+        let estimated_tokens = self.estimate_tokens(&full_prompt);
+        if estimated_tokens > task.max_tokens_per_request {
+            return Err(anyhow::anyhow!(
+                "Prompt for {} still exceeds token limit ({} > {}). Consider reducing data or increasing max_tokens_per_request.",
+                context, estimated_tokens, task.max_tokens_per_request
+            ));
+        }
+        
+        debug!("Sending prompt for {} to LLM (length: {} chars, ~{} tokens)", 
+               context, full_prompt.len(), estimated_tokens);
+        
+        let response = self.llm_service.chat(vec![
+            crate::llm::service::ChatMessage::system(
+                "You are KafkaPilot, an expert Kafka administrator analyzing cluster health. \
+                 Always respond with valid JSON containing a 'findings' array."
+            ),
+            crate::llm::service::ChatMessage::user(&full_prompt),
+        ]).await?;
+        
+        debug!("Received LLM response for {} (length: {} chars)", context, response.len());
+        
+        // Parse the response into findings
+        self.parse_findings(&response, task)
+    }
+    
+    /// Estimate token count (rough approximation: 1 token ≈ 4 characters)
+    fn estimate_tokens(&self, text: &str) -> usize {
+        // Very rough approximation: English text is ~4 chars per token
+        // JSON and code can be different, but this gives us a ballpark
+        text.len() / 4
+    }
+    
+    /// Create a snapshot with only one broker's data, filtered by task requirements
+    fn create_broker_snapshot(&self, original: &Snapshot, broker_name: &str) -> Result<Snapshot> {
+        let mut broker_snapshot = original.clone();
+        
+        // Clear all collector data first
+        broker_snapshot.collectors = crate::snapshot::format::CollectorOutputs::default();
+        
+        // Filter broker data to only include the specified broker and needed data types  
+        if let Some(brokers_data) = original.collectors.custom.get("brokers") {
+            if let Some(brokers_obj) = brokers_data.as_object() {
+                if let Some(broker_data) = brokers_obj.get(broker_name) {
+                    if let Some(broker_obj) = broker_data.as_object() {
+                        let mut filtered_broker = serde_json::Map::new();
+                        
+                        // Extract configs and logs for compatibility with prepare_data function
+                        if let Some(configs) = broker_obj.get("configs") {
+                            filtered_broker.insert("configs".to_string(), configs.clone());
+                            // Also put configs in the standard collector field
+                            broker_snapshot.collectors.config = Some(configs.clone());
+                        }
+                        if let Some(logs) = broker_obj.get("logs") {
+                            filtered_broker.insert("logs".to_string(), logs.clone());
+                            // Also put logs in the standard collector field  
+                            broker_snapshot.collectors.logs = Some(logs.clone());
+                        }
+                        // Skip system, metrics, data directories for log analysis tasks
+                        // These can consume 200k+ tokens per broker
+                        
+                        let mut single_broker = serde_json::Map::new();
+                        single_broker.insert(broker_name.to_string(), serde_json::Value::Object(filtered_broker));
+                        
+                        let mut filtered_custom = std::collections::HashMap::new();
+                        filtered_custom.insert("brokers".to_string(), serde_json::Value::Object(single_broker));
+                        broker_snapshot.collectors.custom = filtered_custom;
+                    }
+                }
+            }
+        }
+        
+        Ok(broker_snapshot)
+    }
+
     /// Build the prompt with actual data
     fn build_prompt(&self, task: &AnalysisTask, snapshot: &Snapshot) -> Result<String> {
         let mut prompt = task.prompt.clone();

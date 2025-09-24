@@ -37,78 +37,53 @@ prompt: |
   - Authentication/authorization failures
   - Network connectivity issues
   
-  Step 4: Provide Specific Results
-  IMPORTANT: Analyze each broker individually and report per-broker findings.
+  Step 4: Provide Single Broker Results
+  IMPORTANT: You are analyzing only ONE specific broker. Report findings for this single broker only.
   
-  If NO significant errors found in recent logs, return:
+  If NO significant errors found in this broker's recent logs, return:
   {
     "findings": [
       {
         "type": "recent_log_errors_check",
-        "description": "All X brokers show clean log status for the last 24 hours. No ERROR or FATAL level messages detected in configured log destinations. Broker stability appears good with no recent error conditions indicating operational issues.",
+        "description": "This broker shows clean log status for the last 24 hours. No ERROR or FATAL level messages detected in configured log destinations. Broker stability appears good with no recent error conditions indicating operational issues.",
         "severity": "info",
-        "brokers_analyzed": [
-          {
-            "broker_id": "broker_0",
-            "logging_method": "file-based",
-            "log_sources_checked": ["server.log", "controller.log"],
-            "error_count": 0,
-            "fatal_count": 0,
-            "last_error_time": null,
-            "errors_found": false
-          }
-        ],
+        "broker_analysis": {
+          "logging_method": "file-based", 
+          "log_sources_checked": ["server.log", "controller.log"],
+          "error_count": 0,
+          "fatal_count": 0,
+          "warn_count": 0,
+          "last_error_time": null,
+          "errors_found": false
+        },
         "recommendation": "Broker logs indicate stable operation with no recent error conditions"
       }
     ]
   }
   
-  If errors are detected in recent logs, return:
+  If errors are detected in this broker's recent logs, return:
   {
     "findings": [
       {
         "type": "recent_log_errors_check",
-        "description": "WARNING: X out of Y brokers show error conditions in logs from the last 24 hours. Error summary: broker_1 (5 ERROR messages, 1 FATAL, topics: replication lag), broker_2 (12 ERROR messages, disk I/O timeouts), broker_3 (3 ERROR messages, network connectivity). Recent errors indicate potential stability or availability issues that may impact broker performance or cause service disruptions.",
+        "description": "WARNING: This broker shows error conditions in logs from the last 24 hours. Error summary: 5 ERROR messages, 1 FATAL message, and 3 WARN messages detected related to [specify categories like: network connectivity, replication issues, disk I/O, etc.]. Recent errors indicate potential stability or availability issues that may impact this broker's performance or cause service disruptions.",
         "severity": "warning",
-        "brokers_analyzed": [
-          {
-            "broker_id": "broker_0",
-            "logging_method": "file-based",
-            "log_sources_checked": ["server.log", "controller.log"],
-            "error_count": 0,
-            "fatal_count": 0,
-            "errors_found": false
-          },
-          {
-            "broker_id": "broker_1", 
-            "logging_method": "journalctl",
-            "log_sources_checked": ["systemd journal"],
-            "error_count": 5,
-            "fatal_count": 1,
-            "last_error_time": "2024-01-15T14:32:10Z",
-            "error_categories": ["replication", "timeout"],
-            "sample_errors": [
-              "ERROR [ReplicaFetcher replicaId=1] Error for partition topic-1-0",
-              "FATAL [KafkaServer id=1] Fatal error during startup"
-            ],
-            "errors_found": true
-          },
-          {
-            "broker_id": "broker_2",
-            "logging_method": "mixed",
-            "log_sources_checked": ["server.log", "systemd journal"],
-            "error_count": 12,
-            "fatal_count": 0,
-            "last_error_time": "2024-01-15T16:45:22Z",
-            "error_categories": ["disk_io", "timeout"],
-            "sample_errors": [
-              "ERROR [kafka-request-handler-0] Disk error when writing to log",
-              "ERROR [kafka-network-thread-1] Connection timeout"
-            ],
-            "errors_found": true
-          }
-        ],
-        "recommendation": "Investigate recent error conditions immediately. Focus on brokers with FATAL errors first, then address ERROR messages by category. Monitor broker health closely and consider failover procedures if errors persist."
+        "broker_analysis": {
+          "logging_method": "journalctl",
+          "log_sources_checked": ["systemd journal"],
+          "error_count": 5,
+          "fatal_count": 1,
+          "warn_count": 3,
+          "last_error_time": "2024-01-15T14:32:10Z",
+          "error_categories": ["network_connectivity", "replication"],
+          "sample_errors": [
+            "ERROR [ReplicaFetcher replicaId=1] Error for partition topic-1-0",
+            "FATAL [KafkaServer id=1] Fatal error during startup",
+            "WARN [NetworkClient] Connection to node 11 could not be established"
+          ],
+          "errors_found": true
+        },
+        "recommendation": "Investigate this broker's error conditions immediately. Focus on FATAL errors first, then address ERROR messages by category. Monitor broker health closely and consider failover procedures if errors persist."
       }
     ]
   }
@@ -139,7 +114,7 @@ prompt: |
   - "OutOfMemoryError" - heap exhaustion
   - "IOException" - disk/network I/O problems
   
-  IMPORTANT: Always include specific error counts, categories, and sample error messages for each broker in the description.
+  IMPORTANT: Always include specific error counts, categories, and sample error messages for this specific broker in the description. Do not reference other brokers or make cluster-wide statements.
 
 include_data:
   - config
@@ -158,3 +133,5 @@ severity_keywords:
 
 default_severity: warning
 enabled: true
+per_broker_analysis: true
+max_tokens_per_request: 80000

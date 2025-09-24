@@ -48,6 +48,14 @@ pub struct AnalysisTask {
     /// Optional cluster type filter (kraft, zookeeper, or both if not specified)
     #[serde(default)]
     pub cluster_type_filter: Vec<String>,
+    
+    /// Whether to process data per broker to avoid token limits (default: false)
+    #[serde(default)]
+    pub per_broker_analysis: bool,
+    
+    /// Maximum tokens to use per request (default: 100000 to leave room for response)
+    #[serde(default = "default_max_tokens")]
+    pub max_tokens_per_request: usize,
 }
 
 fn default_severity() -> String {
@@ -60,6 +68,10 @@ fn default_category() -> String {
 
 fn default_enabled() -> bool {
     true
+}
+
+fn default_max_tokens() -> usize {
+    100000  // Leave room for response tokens
 }
 
 /// Loads tasks from YAML files
