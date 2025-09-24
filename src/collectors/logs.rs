@@ -1,5 +1,4 @@
 use super::{Collector, CollectorError, CollectorResult, KafkaConfig};
-// LogDiscovery is no longer needed - we use EnhancedLogDiscovery in the scan module
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

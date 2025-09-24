@@ -67,22 +67,24 @@ pub fn parse_kafkactl_brokers(yaml_output: &str) -> Result<Vec<BrokerInfo>> {
             continue;
         }
         
-        if in_broker_section && current_broker.is_some() {
-            // Parse broker fields - ID is already handled above
-            if line.starts_with("address:") {
-                if let Some(addr_str) = line.strip_prefix("address:") {
-                    let address = addr_str.trim().trim_matches('"');
-                    // Extract hostname from hostname:port format
-                    let hostname = if let Some(colon_pos) = address.find(':') {
-                        &address[..colon_pos]
-                    } else {
-                        address
-                    };
-                    current_broker.as_mut().unwrap().hostname = hostname.to_string();
+        if in_broker_section {
+            if let Some(ref mut broker) = current_broker {
+                // Parse broker fields - ID is already handled above
+                if line.starts_with("address:") {
+                    if let Some(addr_str) = line.strip_prefix("address:") {
+                        let address = addr_str.trim().trim_matches('"');
+                        // Extract hostname from hostname:port format
+                        let hostname = if let Some(colon_pos) = address.find(':') {
+                            &address[..colon_pos]
+                        } else {
+                            address
+                        };
+                        broker.hostname = hostname.to_string();
+                    }
+                } else if line.starts_with("port:") || line.starts_with("rack:") {
+                    // Additional fields we might want to capture later
+                    continue;
                 }
-            } else if line.starts_with("port:") || line.starts_with("rack:") {
-                // Additional fields we might want to capture later
-                continue;
             }
         }
     }
@@ -107,9 +109,11 @@ pub fn parse_kafkactl_brokers(yaml_output: &str) -> Result<Vec<BrokerInfo>> {
 pub async fn discover_brokers_from_single_local(broker_address: &str) -> Result<Vec<BrokerInfo>> {
     info!("Running local broker discovery");
     let admin_collector = AdminCollector::new();
-    let mut kafka_config = KafkaConfig::default();
-    kafka_config.bootstrap_servers = vec![broker_address.to_string()];
-    kafka_config.timeout_secs = 30;
+    let kafka_config = KafkaConfig {
+        bootstrap_servers: vec![broker_address.to_string()],
+        timeout_secs: 30,
+        ..Default::default()
+    };
     
     // Use the collector to discover all brokers
     match admin_collector.collect(&kafka_config).await {

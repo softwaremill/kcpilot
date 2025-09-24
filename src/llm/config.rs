@@ -94,7 +94,7 @@ impl LlmConfig {
         
         if let Ok(temperature) = env::var("LLM_TEMPERATURE") {
             if let Ok(temp) = temperature.parse::<f32>() {
-                if temp >= 0.0 && temp <= 1.0 {
+                if (0.0..=1.0).contains(&temp) {
                     config.temperature = temp;
                 }
             }

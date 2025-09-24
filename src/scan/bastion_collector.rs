@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use std::collections::HashMap;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use super::ClusterData;
@@ -205,7 +205,7 @@ impl BastionCollector {
         &self, 
         kafka_installation_path: &str, 
         discovery_broker: &str,
-        tools_dir: &PathBuf,
+        tools_dir: &Path,
         kafkactl_data: &mut HashMap<String, String>
     ) -> Result<()> {
         print!("  • Getting topics (kafka-tools)... ");
@@ -257,7 +257,7 @@ impl BastionCollector {
     /// Collect topics using kafkactl (fallback method)
     fn collect_topics_with_kafkactl(
         &self,
-        kafkactl_dir: &PathBuf,
+        kafkactl_dir: &Path,
         kafkactl_data: &mut HashMap<String, String>
     ) -> Result<()> {
         print!("  • Getting topics (kafkactl)... ");

@@ -49,7 +49,7 @@ impl LlmService {
     /// Create a new LLM service from configuration
     pub fn new(config: LlmConfig) -> Result<Self, LlmServiceError> {
         config.validate()
-            .map_err(|e| LlmServiceError::ConfigError(e))?;
+            .map_err(LlmServiceError::ConfigError)?;
         
         let mut openai_config = OpenAIConfig::new()
             .with_api_key(&config.api_key);
@@ -70,14 +70,14 @@ impl LlmService {
     /// Create a service from environment variables
     pub fn from_env() -> Result<Self, LlmServiceError> {
         let config = LlmConfig::from_env()
-            .map_err(|e| LlmServiceError::ConfigError(e))?;
+            .map_err(LlmServiceError::ConfigError)?;
         Self::new(config)
     }
     
     /// Create a service from environment variables with debug logging
     pub fn from_env_with_debug(enable_debug: bool) -> Result<Self, LlmServiceError> {
         let config = LlmConfig::from_env()
-            .map_err(|e| LlmServiceError::ConfigError(e))?;
+            .map_err(LlmServiceError::ConfigError)?;
         let service = Self::new(config)?;
         service.with_debug_file(enable_debug)
     }
@@ -85,7 +85,7 @@ impl LlmService {
     /// Create a service from environment variables with options
     pub fn from_env_with_options(enable_debug: bool, timeout_secs: u64) -> Result<Self, LlmServiceError> {
         let mut config = LlmConfig::from_env()
-            .map_err(|e| LlmServiceError::ConfigError(e))?;
+            .map_err(LlmServiceError::ConfigError)?;
         
         // Override timeout with CLI flag value
         config.timeout_secs = timeout_secs;
@@ -158,7 +158,7 @@ impl LlmService {
             .into_iter()
             .map(|msg| msg.into_openai_message())
             .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| LlmServiceError::Other(e))?;
+            .map_err(LlmServiceError::Other)?;
         
         // Build request with conditional temperature support
         // Newer models (gpt-4o, gpt-4-turbo, etc.) only support default temperature
@@ -273,7 +273,7 @@ impl LlmService {
         
         // Log the response content if debug mode is enabled
         if self.debug_file.is_some() {
-            self.log_debug(&format!("\n--- Response Content ---"));
+            self.log_debug("\n--- Response Content ---");
             self.log_debug(&format!("Response length: {} characters", content.len()));
             self.log_debug(&format!("Response preview (first 500 chars): {}", 
                 if content.len() > 500 { 
@@ -283,7 +283,7 @@ impl LlmService {
                 }
             ));
             self.log_debug(&format!("\n--- Full Response ---\n{}", content));
-            self.log_debug(&format!("\n==== END OF REQUEST/RESPONSE ===="));
+            self.log_debug("\n==== END OF REQUEST/RESPONSE ====");
             self.log_debug(&format!("Completed at: {}\n", Local::now().format("%Y-%m-%d %H:%M:%S")));
         }
         

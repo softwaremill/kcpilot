@@ -1,6 +1,6 @@
 use anyhow::{Context, Result};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::path::Path;
 use std::process::Command;
 use tracing::{debug, info, warn};
 
@@ -244,7 +244,7 @@ impl EnhancedLogDiscovery {
     }
 
     /// Analyze log4j configuration to determine log destinations
-    async fn analyze_log4j(&self, log4j_path: &PathBuf, env_vars: &HashMap<String, String>) -> Result<LogOutputInfo> {
+    async fn analyze_log4j(&self, log4j_path: &Path, env_vars: &HashMap<String, String>) -> Result<LogOutputInfo> {
         debug!("Analyzing log4j configuration...");
         
         // Clean the log4j path - remove file: prefix if present

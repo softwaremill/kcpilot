@@ -198,7 +198,7 @@ impl LlmAnalyzer {
                                 let key = line[..eq_pos].trim();
                                 if !key.starts_with('#') && !key.is_empty() {
                                     config_file_map.entry(key.to_string())
-                                        .or_insert_with(Vec::new)
+                                        .or_default()
                                         .push(format!("brokers/{}", file_path));
                                 }
                             }

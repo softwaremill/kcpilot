@@ -150,7 +150,7 @@ impl BrokerCollector {
                 if let Some(start) = line.find('/') {
                     if let Some(end) = line[start..].find(';') {
                         let service_path = &line[start..start + end];
-                        if let Some(filename) = service_path.split('/').last() {
+                        if let Some(filename) = service_path.split('/').next_back() {
                             return Some(filename.to_string());
                         }
                     }
@@ -383,7 +383,7 @@ impl BrokerCollector {
                     }
                 }
                 
-                if configs.len() > 0 {
+                if !configs.is_empty() {
                     println!("✅ Enhanced discovery found {} config files", configs.len());
                 }
             }
@@ -542,8 +542,7 @@ impl BrokerCollector {
                     if !log_content.trim().is_empty() {
                         // Create safe filename
                         let safe_name = log_name
-                            .replace('/', "_")
-                            .replace(' ', "_")
+                            .replace(['/', ' '], "_")
                             .trim_start_matches('_')
                             .to_string();
                         let final_name = if safe_name.is_empty() {

@@ -69,10 +69,9 @@ impl Log4jParser {
                 "/home/kafka/logs",       // User-based installs
             ];
             
-            for log_dir in possible_log_dirs {
+            if let Some(log_dir) = possible_log_dirs.into_iter().next() {
                 resolved_path = resolved_path.replace("${kafka.logs.dir}", log_dir);
                 resolved_path = resolved_path.replace("${log.dir}", log_dir);
-                break; // Use the first one for now
             }
         }
         

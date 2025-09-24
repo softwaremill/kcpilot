@@ -19,7 +19,7 @@ impl AiExecutor {
     pub fn new(llm_service: LlmService) -> Self {
         Self {
             llm_service,
-            task_loader: TaskLoader::default(),
+            task_loader: TaskLoader::default_tasks_dir(),
         }
     }
     

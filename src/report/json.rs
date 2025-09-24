@@ -56,6 +56,12 @@ pub struct Summary {
 /// JSON report generator
 pub struct JsonReporter;
 
+impl Default for JsonReporter {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl JsonReporter {
     pub fn new() -> Self {
         Self

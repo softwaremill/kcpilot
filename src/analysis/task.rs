@@ -74,7 +74,7 @@ impl TaskLoader {
         }
     }
     
-    pub fn default() -> Self {
+    pub fn default_tasks_dir() -> Self {
         Self::new("analysis_tasks")
     }
     

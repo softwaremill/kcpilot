@@ -490,7 +490,7 @@ impl Scanner {
         let mut report = String::new();
         
         report.push_str("# Kafka Cluster Data Collection Summary\n\n");
-        report.push_str(&format!("## Collection Details\n"));
+        report.push_str("## Collection Details\n");
         report.push_str(&format!("- **Timestamp**: {}\n", Utc::now()));
         report.push_str(&format!("- **Output Directory**: {}\n", self.config.output_dir.display()));
         
@@ -535,13 +535,11 @@ impl Scanner {
         let mut total_size = 0;
         
         // Walk through output directory and count files/size
-        for entry in walkdir::WalkDir::new(&self.config.output_dir) {
-            if let Ok(entry) = entry {
-                if entry.file_type().is_file() {
-                    total_files += 1;
-                    if let Ok(metadata) = entry.metadata() {
-                        total_size += metadata.len();
-                    }
+        for entry in walkdir::WalkDir::new(&self.config.output_dir).into_iter().flatten() {
+            if entry.file_type().is_file() {
+                total_files += 1;
+                if let Ok(metadata) = entry.metadata() {
+                    total_size += metadata.len();
                 }
             }
         }

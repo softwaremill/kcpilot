@@ -8,7 +8,7 @@ pub async fn handle_task_command(action: crate::cli::commands::TaskCommand) -> R
 
     match action {
         TaskCommand::List { detailed } => {
-            let loader = TaskLoader::default();
+            let loader = TaskLoader::default_tasks_dir();
             let tasks = loader.load_all()?;
 
             println!("\n📋 Available Analysis Tasks\n");
@@ -37,7 +37,7 @@ pub async fn handle_task_command(action: crate::cli::commands::TaskCommand) -> R
 
         TaskCommand::Test { task_id, scanned_data, debug } => {
             // Load the specific task
-            let loader = TaskLoader::default();
+            let loader = TaskLoader::default_tasks_dir();
             let tasks = loader.load_all()?;
             let task = tasks.into_iter()
                 .find(|t| t.id == task_id)
@@ -155,7 +155,7 @@ enabled: true
         }
 
         TaskCommand::Show { task_id } => {
-            let loader = TaskLoader::default();
+            let loader = TaskLoader::default_tasks_dir();
             let tasks = loader.load_all()?;
             let task = tasks.into_iter()
                 .find(|t| t.id == task_id)

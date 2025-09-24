@@ -113,7 +113,7 @@ impl MarkdownReporter {
         }
         md.push_str(&format!("| **Scan Timestamp** | {} |\n", snapshot.timestamp.format("%Y-%m-%d %H:%M:%S UTC")));
         md.push_str(&format!("| **Collection ID** | `{}` |\n", snapshot.metadata.collection_id));
-        md.push_str("\n");
+        md.push('\n');
 
         // Health Score
         md.push_str("## Health Score\n\n");
@@ -184,7 +184,7 @@ impl MarkdownReporter {
             for (category, count) in categories {
                 md.push_str(&format!("| {} | {} |\n", self.format_category(category), count));
             }
-            md.push_str("\n");
+            md.push('\n');
         }
 
         // Detailed Findings
@@ -216,7 +216,7 @@ impl MarkdownReporter {
                 for finding in critical_high {
                     md.push_str(&format!("   - {}\n", finding.title));
                 }
-                md.push_str("\n");
+                md.push('\n');
             }
             
             md.push_str("2. **General Recommendations**:\n");
@@ -290,7 +290,7 @@ impl MarkdownReporter {
                     if let Some(recommended) = &config.recommended_value {
                         md.push_str(&format!(" → Recommended: `{}`", recommended));
                     }
-                    md.push_str("\n");
+                    md.push('\n');
                     if !config.source_files.is_empty() {
                         md.push_str("  - Affected files:\n");
                         for file in &config.source_files {
@@ -298,7 +298,7 @@ impl MarkdownReporter {
                         }
                     }
                 }
-                md.push_str("\n");
+                md.push('\n');
             }
             
             // Metric evidence
@@ -312,9 +312,9 @@ impl MarkdownReporter {
                     if let Some(threshold) = metric.threshold {
                         md.push_str(&format!(" (threshold: {})", threshold));
                     }
-                    md.push_str("\n");
+                    md.push('\n');
                 }
-                md.push_str("\n");
+                md.push('\n');
             }
             
             // Log evidence
@@ -329,7 +329,7 @@ impl MarkdownReporter {
                 if finding.evidence.logs.len() > 3 {
                     md.push_str(&format!("- _{} more log entries..._\n", finding.evidence.logs.len() - 3));
                 }
-                md.push_str("\n");
+                md.push('\n');
             }
         }
         
@@ -346,7 +346,7 @@ impl MarkdownReporter {
                     md.push_str(&format!("   - **Verify**: {}\n", verification));
                 }
             }
-            md.push_str("\n");
+            md.push('\n');
             
             // Remediation metadata
             md.push_str("**Remediation Details:**\n\n");
@@ -359,7 +359,7 @@ impl MarkdownReporter {
             if let Some(rollback) = &finding.remediation.rollback_plan {
                 md.push_str(&format!("- **Rollback Plan**: {}\n", rollback));
             }
-            md.push_str("\n");
+            md.push('\n');
         }
         
         md.push_str("---\n\n");

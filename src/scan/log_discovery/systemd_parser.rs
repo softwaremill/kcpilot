@@ -98,18 +98,17 @@ impl SystemdParser {
         for line in content.lines() {
             let line = line.trim();
             
-            if line.starts_with("EnvironmentFile=") {
-                let path = line[16..].trim_matches('"');
+            if let Some(stripped) = line.strip_prefix("EnvironmentFile=") {
+                let path = stripped.trim_matches('"');
                 environment_file = Some(PathBuf::from(path));
-            } else if line.starts_with("Environment=") {
-                let env_part = &line[12..];
+            } else if let Some(env_part) = line.strip_prefix("Environment=") {
                 if let Some(eq_pos) = env_part.find('=') {
                     let key = env_part[..eq_pos].trim();
                     let value = env_part[eq_pos + 1..].trim_matches('"');
                     environment_vars.insert(key.to_string(), value.to_string());
                 }
-            } else if line.starts_with("ExecStart=") {
-                exec_start = Some(line[10..].to_string());
+            } else if let Some(stripped) = line.strip_prefix("ExecStart=") {
+                exec_start = Some(stripped.to_string());
             }
         }
         

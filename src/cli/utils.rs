@@ -1,7 +1,7 @@
 use anyhow::Result;
 use crate::snapshot::format::{Snapshot, SnapshotMetadata, ClusterMode};
 use std::fs;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use tracing::{info, warn};
 use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 use walkdir::WalkDir;
@@ -90,7 +90,7 @@ pub fn load_directory_recursive(dir: &Path, base_path: &Path) -> Result<serde_js
 }
 
 /// Load snapshot from a scan directory
-pub fn load_snapshot_from_directory(path: &PathBuf) -> Result<Snapshot> {
+pub fn load_snapshot_from_directory(path: &Path) -> Result<Snapshot> {
     info!("\n📂 Loading ALL files from directory: {}", path.display());
     info!("────────────────────────────────────────");
 
