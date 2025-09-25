@@ -71,8 +71,6 @@ navigation:
       url: "/quickstart"
     - title: "Installation"
       url: "/installation"
-    - title: "Support"
-      url: "/support"
   
   tutorials:
     - title: "All Tutorials"
