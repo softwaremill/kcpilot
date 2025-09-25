@@ -4,8 +4,6 @@ title: Installation
 permalink: /installation/
 ---
 
-# Installation Guide
-
 Multiple ways to install and run KafkaPilot depending on your environment and preferences.
 
 ## Prerequisites
@@ -57,7 +55,7 @@ cd kafkapilot
 cargo run --bin kafkapilot -- --help
 
 # Run with debug logging
-RUST_LOG=kafkapilot=debug cargo run --bin kafkapilot -- scan --bastion kafka-prod
+RUST_LOG=kafkapilot=debug cargo run --bin kafkapilot -- scan --bastion kafka-prod --broker kafka-poligon-dc1-1.c.sml-sandbox.internal:9092
 ```
 
 ### 3. Future Release Options
@@ -149,15 +147,13 @@ export LLM_DEBUG=true
 kafkapilot --version
 kafkapilot --help
 
-# Test SSH connectivity
-kafkapilot scan --bastion kafka-prod --dry-run
 ```
 
 ### Minimal Test
 
 ```bash
 # Simple local test (if running on bastion)
-kafkapilot scan --output test-installation
+kafkapilot scan --broker kafka-poligon-dc1-1.c.sml-sandbox.internal:9092 --output test-installation
 
 # Verify output structure
 ls -la test-installation/
@@ -187,128 +183,9 @@ which kafkapilot
 kafkapilot --version
 ```
 
-### Container Deployment
-
-Create a container with KafkaPilot for isolated execution:
-
-```dockerfile
-# Dockerfile
-FROM rust:1.70 as builder
-COPY . /app
-WORKDIR /app
-RUN cargo build --release
-
-FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y \
-    openssh-client \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
-
-COPY --from=builder /app/target/release/kafkapilot /usr/local/bin/
-COPY --from=builder /app/analysis_tasks /usr/share/kafkapilot/analysis_tasks
-
-# Mount SSH config and keys at runtime
-VOLUME ["/root/.ssh"]
-ENTRYPOINT ["kafkapilot"]
-```
-
-```bash
-# Build and run
-docker build -t kafkapilot .
-docker run -v ~/.ssh:/root/.ssh:ro kafkapilot scan --bastion kafka-prod
-```
-
-## Upgrading
-
-### From Source
-
-```bash
-cd kafkapilot
-git pull origin main
-cargo build --release
-
-# Backup existing binary (optional)
-cp target/release/kafkapilot target/release/kafkapilot.backup.$(date +%Y%m%d)
-```
-
-### Configuration Migration
-
-When upgrading, check for new configuration options:
-
-```bash
-# Compare available commands
-kafkapilot --help
-
-# Check for new analysis tasks
-kafkapilot task list --detailed
-
-# Review new environment variables
-kafkapilot info
-```
-
-## Troubleshooting
-
-### Build Issues
-
-```bash
-# Update Rust toolchain
-rustup update
-
-# Clear cargo cache
-cargo clean
-cargo build --release
-
-# Check dependencies
-cargo check
-```
-
-### SSH Issues
-
-```bash
-# Test SSH connectivity manually
-ssh kafka-prod "echo 'SSH test successful'"
-
-# Debug SSH configuration
-ssh -v kafka-prod
-
-# Check SSH agent
-ssh-add -l
-echo $SSH_AUTH_SOCK
-```
-
-### Permission Issues
-
-```bash
-# Verify file permissions
-ls -la target/release/kafkapilot
-
-# Fix executable permissions
-chmod +x target/release/kafkapilot
-
-# Check PATH
-echo $PATH
-which kafkapilot
-```
-
-## Performance Tuning
-
-### Resource Optimization
-
-```bash
-# Reduce memory usage for large clusters
-export KAFKAPILOT_MAX_PARALLEL_BROKERS=3
-
-# Limit log collection size
-export KAFKAPILOT_MAX_LOG_SIZE=100MB
-
-# Configure timeouts
-export KAFKAPILOT_SSH_TIMEOUT=30
-export KAFKAPILOT_COLLECTION_TIMEOUT=600
-```
-
 ## Next Steps
 
-- **[Quick Start](quickstart.html)** - Get running in 5 minutes
+- **[Quick Start](/quickstart)** - Get running in 5 minutes
 - **[Tutorials](tutorials.html)** - Learn common diagnostic workflows
 - **[Examples](examples.html)** - Real-world troubleshooting scenarios
 - **[API Reference](api.html)** - Complete command documentation
