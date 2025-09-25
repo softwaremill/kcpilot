@@ -160,29 +160,6 @@ ls -la test-installation/
 cat test-installation/COLLECTION_SUMMARY.md
 ```
 
-## Deployment Options
-
-### Single-User Installation
-
-```bash
-# Install to user's home directory
-mkdir -p ~/.local/bin
-cp target/release/kafkapilot ~/.local/bin/
-echo 'export PATH="$PATH:$HOME/.local/bin"' >> ~/.bashrc
-```
-
-### System-Wide Installation
-
-```bash
-# Install system-wide (requires sudo)
-sudo cp target/release/kafkapilot /usr/local/bin/
-sudo chmod +x /usr/local/bin/kafkapilot
-
-# Verify installation
-which kafkapilot
-kafkapilot --version
-```
-
 ## Next Steps
 
 - **[Quick Start](/quickstart)** - Get running in 5 minutes
