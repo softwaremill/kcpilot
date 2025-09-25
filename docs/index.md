@@ -17,38 +17,38 @@ We're building KafkaPilot. A tool that proactively diagnoses and resolves common
 
 **JVM & Memory Configuration**
 
-\- JVM Heap Memory Preallocation Check \- Ensures Xms equals Xmx for optimal performance  
-\- JVM Heap vs System Memory Ratio Check \- Verifies heap ≤ 25% of system RAM for page cache  
-\- JVM Heap Size Limit Check \- Prevents heap settings above 8GB to avoid performance issues
+- JVM Heap Memory Preallocation Check \- Ensures Xms equals Xmx for optimal performance  
+- JVM Heap vs System Memory Ratio Check \- Verifies heap ≤ 25% of system RAM for page cache  
+- JVM Heap Size Limit Check \- Prevents heap settings above 8GB to avoid performance issues
 
 **High Availability & Clustering**
 
-\- Broker Count High Availability Check \- Analyzes broker count for HA considerations  
-\- ISR vs Replication Factor Margin Check \- Ensures adequate margin over min.insync.replicas  
-\- Zookeeper High Availability Configuration Check \- Prevents split-brain scenarios in ZK clusters  
-\- KRaft Controller Quorum High Availability Check \- Ensures proper KRaft controller quorum setup
+- Broker Count High Availability Check \- Analyzes broker count for HA considerations  
+- ISR vs Replication Factor Margin Check \- Ensures adequate margin over min.insync.replicas  
+- Zookeeper High Availability Configuration Check \- Prevents split-brain scenarios in ZK clusters  
+- KRaft Controller Quorum High Availability Check \- Ensures proper KRaft controller quorum setup
 
 **Security & Access Control**
 
-\- Authentication and Authorization Configuration Check \- Blocks anonymous access  
-\- In-Transit Encryption Configuration Check \- Ensures secure communication  
-\- Rack Awareness Configuration Check \- Validates failure zone distribution
+- Authentication and Authorization Configuration Check \- Blocks anonymous access  
+- In-Transit Encryption Configuration Check \- Ensures secure communication  
+- Rack Awareness Configuration Check \- Validates failure zone distribution
 
 **Performance & Resource Management**
 
-\- Thread Configuration Validation \- Validates network, I/O, and replication thread settings  
-\- Separate Client and Cluster Listeners Check \- Ensures separate listeners for optimal performance  
-\- Multiple Log Directories Configuration Check \- Detects complex log.dirs configurations  
-\- Minimum CPU Core Count Check \- Ensures at least 4 CPU cores per broker
+- Thread Configuration Validation \- Validates network, I/O, and replication thread settings  
+- Separate Client and Cluster Listeners Check \- Ensures separate listeners for optimal performance  
+- Multiple Log Directories Configuration Check \- Detects complex log.dirs configurations  
+- Minimum CPU Core Count Check \- Ensures at least 4 CPU cores per broker
 
 **Operational Health**
 
-\- Recent Log Error Detection \- Scans logs for ERROR/FATAL messages in last 24 hours
+- Recent Log Error Detection \- Scans logs for ERROR/FATAL messages in last 24 hours
 
 **Zookeeper-Specific**
 
-\- Zookeeper Heap Memory Size Check \- Validates ZK heap ≤ 2GB for typical deployments  
-\- Zookeeper Heap Memory Preallocation Check \- Ensures ZK heap preallocation
+- Zookeeper Heap Memory Size Check \- Validates ZK heap ≤ 2GB for typical deployments  
+- Zookeeper Heap Memory Preallocation Check \- Ensures ZK heap preallocation
 
 What’s next? Your priceless feedback\!
 
