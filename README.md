@@ -41,7 +41,7 @@ You can run KafkaPilot directly from source using `cargo run`:
 
 ```bash
 # 1. Scan a cluster (data collection)
-cargo run --bin kafkapilot -- scan --bastion kafka-poligon --output test-scan
+cargo run --bin kafkapilot -- scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092 --output test-scan
 
 # 2. Analyze the collected data with AI
 cargo run --bin kafkapilot -- analyze ./test-scan --report terminal
@@ -53,18 +53,29 @@ cargo run --bin kafkapilot -- analyze ./test-scan --report markdown --output rep
 ## Commands Overview
 
 ### Data Collection
+
+#### Local Scan (running directly on bastion host)
 ```bash
-# Scan locally on bastion (no SSH required)
-cargo run --bin kafkapilot -- scan
+# Basic local scan - must specify at least one broker
+cargo run --bin kafkapilot -- scan --broker kafka-broker-1.internal:9092
 
-# Scan remotely via SSH bastion
-cargo run --bin kafkapilot -- scan --bastion kafka-poligon
+# Local scan with custom output directory
+cargo run --bin kafkapilot -- scan --broker kafka-broker-1.internal:9092 --output my-cluster-scan
 
-# Specify custom output directory
-cargo run --bin kafkapilot -- scan --bastion kafka-poligon --output test-scan
+# With debug logging
+RUST_LOG=kafkapilot=debug cargo run --bin kafkapilot -- scan --broker kafka-broker-1.internal:9092
+```
 
-# Run with verbose logging
-RUST_LOG=kafkapilot=debug cargo run --bin kafkapilot -- scan --bastion kafka-poligon
+#### Remote Scan (via SSH bastion)
+```bash
+# Basic remote scan - requires both bastion and broker
+cargo run --bin kafkapilot -- scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092
+
+# Remote scan with custom output directory
+cargo run --bin kafkapilot -- scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092 --output test-scan
+
+# With debug logging
+RUST_LOG=kafkapilot=debug cargo run --bin kafkapilot -- scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092
 ```
 
 ### Analysis
@@ -106,7 +117,7 @@ cargo run --bin kafkapilot -- task new --id custom-task --name "My Custom Analys
 ### Utility Commands
 ```bash
 # Test SSH connectivity to brokers
-cargo run --bin kafkapilot -- test-ssh --bastion kafka-poligon
+cargo run --bin kafkapilot -- test-ssh --bastion kafka-poligon --broker kafka-broker-1.internal:9092
 
 # Show configuration
 cargo run --bin kafkapilot -- config
@@ -126,9 +137,13 @@ After building with `cargo build --release`, you can use the binary directly:
 # Add to PATH (optional)
 export PATH="$PATH:$(pwd)/target/release"
 
-# Complete workflow: scan + analyze
-kafkapilot scan --bastion kafka-poligon --output my-cluster-scan
+# Complete workflow: scan + analyze (remote)
+kafkapilot scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092 --output my-cluster-scan
 kafkapilot analyze ./my-cluster-scan --report terminal
+
+# Complete workflow: scan + analyze (local)
+kafkapilot scan --broker kafka-broker-1.internal:9092 --output my-local-scan
+kafkapilot analyze ./my-local-scan --report terminal
 
 # Generate reports
 kafkapilot analyze ./my-cluster-scan --report markdown --output cluster-report.md
