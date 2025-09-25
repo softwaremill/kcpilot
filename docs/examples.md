@@ -17,7 +17,7 @@ Practical examples of using KafkaPilot to solve common Kafka operational challen
 **Problem Identification:**
 ```bash
 # Emergency scan
-kafkapilot scan --bastion kafka-prod --output consumer-lag-incident
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output consumer-lag-incident
 
 # Check the summary for immediate insights
 cat consumer-lag-incident/COLLECTION_SUMMARY.md
@@ -53,7 +53,7 @@ kafkapilot analyze ./consumer-lag-incident --report terminal
 **Investigation:**
 ```bash
 # Urgent data collection
-kafkapilot scan --bastion kafka-prod --output disk-space-crisis
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output disk-space-crisis
 
 # Check disk utilization immediately
 grep -r "disk\|space\|full" disk-space-crisis/brokers/*/system/
@@ -94,7 +94,7 @@ kafka-configs --bootstrap-server kafka-prod:9092 --entity-type topics --alter \
 **Data Collection:**
 ```bash
 # Collect data from all accessible brokers
-kafkapilot scan --bastion kafka-prod --output network-partition
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output network-partition
 
 # Check broker connectivity
 kafkapilot task test broker_connectivity ./network-partition
@@ -119,7 +119,7 @@ kafkapilot task test broker_connectivity ./network-partition
 **Initial State:**
 ```bash
 # Baseline performance scan
-kafkapilot scan --bastion kafka-prod --output baseline-performance
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output baseline-performance
 
 # Check thread configuration
 kafkapilot task test thread_configuration ./baseline-performance
@@ -133,7 +133,7 @@ kafkapilot task test thread_configuration ./baseline-performance
 **Optimization Process:**
 ```bash
 # After configuration changes
-kafkapilot scan --bastion kafka-prod --output optimized-performance
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output optimized-performance
 
 # Compare configurations
 diff -r baseline-performance/brokers/broker_1/configs/ \
@@ -153,7 +153,7 @@ diff -r baseline-performance/brokers/broker_1/configs/ \
 
 **Investigation:**
 ```bash
-kafkapilot scan --bastion kafka-prod --output jvm-tuning
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output jvm-tuning
 
 # Analyze heap usage patterns
 kafkapilot task test jvm_heap_preallocation ./jvm-tuning
@@ -181,7 +181,7 @@ Recommendation: -Xmx8G -Xms8G -XX:+UseG1GC -XX:MaxGCPauseMillis=100
 
 **Assessment:**
 ```bash
-kafkapilot scan --bastion kafka-prod --output security-audit
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output security-audit
 
 # Check encryption configuration
 kafkapilot task test in_transit_encryption ./security-audit
@@ -218,7 +218,7 @@ ssl.truststore.location=/path/to/truststore
 **Scenario:** Audit user access and permissions across the cluster.
 
 ```bash
-kafkapilot scan --bastion kafka-prod --output access-audit
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output access-audit
 
 # Check authentication configuration  
 kafkapilot task test authentication_authorization ./access-audit
@@ -239,7 +239,7 @@ kafkapilot task test authentication_authorization ./access-audit
 
 **Current State Analysis:**
 ```bash
-kafkapilot scan --bastion kafka-prod --output capacity-baseline
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output capacity-baseline
 
 # Analyze current resource utilization
 kafkapilot task test log_dirs_disk_size_uniformity ./capacity-baseline
@@ -274,7 +274,7 @@ Projected Requirements (10x growth):
 
 **Analysis:**
 ```bash
-kafkapilot scan --bastion kafka-prod --output cost-optimization
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output cost-optimization
 
 # Generate comprehensive analysis
 kafkapilot analyze ./cost-optimization --report json > cost-analysis.json
@@ -311,8 +311,8 @@ kafkapilot analyze ./cost-optimization --report json > cost-analysis.json
 **Comparison Process:**
 ```bash
 # Scan both environments
-kafkapilot scan --bastion kafka-staging --output staging-config
-kafkapilot scan --bastion kafka-prod --output prod-config
+kafkapilot scan --bastion kafka-staging --broker kafka-broker-1.internal:9092 --output staging-config
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output prod-config
 
 # Compare key configurations
 diff -r staging-config/brokers/broker_1/configs/server.properties \
@@ -345,7 +345,7 @@ diff -r staging-config/brokers/broker_1/configs/server.properties \
 **Scenario:** Intermittent ZooKeeper connectivity affecting cluster stability.
 
 ```bash
-kafkapilot scan --bastion kafka-prod --output zk-health
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output zk-health
 
 # Check ZooKeeper-specific issues
 kafkapilot task test zookeeper_ha_check ./zk-health
@@ -369,7 +369,7 @@ kafkapilot task test zookeeper_heap_memory ./zk-health
 **Scenario:** Evaluating migration from ZooKeeper to KRaft mode.
 
 ```bash
-kafkapilot scan --bastion kafka-prod --output kraft-assessment
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output kraft-assessment
 
 # Check KRaft readiness
 kafkapilot task test kraft_controller_ha_check ./kraft-assessment
@@ -398,7 +398,7 @@ kafkapilot task test kraft_controller_ha_check ./kraft-assessment
 ```bash
 # Automated health check script
 #!/bin/bash
-kafkapilot scan --bastion kafka-prod --output /tmp/kafka-health
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output /tmp/kafka-health
 kafkapilot analyze /tmp/kafka-health --report json > /var/metrics/kafka-health.json
 
 # Extract metrics for Prometheus
