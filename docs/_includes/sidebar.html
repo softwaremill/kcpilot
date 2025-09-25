@@ -56,10 +56,27 @@
     <div class="nav-section">
       <div class="nav-section-title">Analysis Tasks</div>
       <ul class="nav-list">
-        <li><a href="{{ "/api" | relative_url }}#built-in-analysis-tasks">Performance tasks</a></li>
-        <li><a href="{{ "/api" | relative_url }}#built-in-analysis-tasks">Security tasks</a></li>
-        <li><a href="{{ "/api" | relative_url }}#built-in-analysis-tasks">Reliability tasks</a></li>
-        <li><a href="{{ "/tutorials" | relative_url }}#8-custom-analysis-tasks">Custom tasks</a></li>
+        <li><a href="{{ "/analysis-tasks" | relative_url }}">Overview</a></li>
+        <li class="nav-subsection">Configuration - General</li>
+        <li><a href="{{ "/analysis-tasks/authentication_authorization" | relative_url }}">Authentication & Authorization</a></li>
+        <li><a href="{{ "/analysis-tasks/broker_count_ha" | relative_url }}">Broker Count HA</a></li>
+        <li><a href="{{ "/analysis-tasks/in_transit_encryption" | relative_url }}">In-Transit Encryption</a></li>
+        <li><a href="{{ "/analysis-tasks/isr_replication_margin" | relative_url }}">ISR Replication</a></li>
+        <li><a href="{{ "/analysis-tasks/jvm_heap_memory_ratio" | relative_url }}">JVM Heap Ratio</a></li>
+        <li><a href="{{ "/analysis-tasks/jvm_heap_preallocation" | relative_url }}">JVM Preallocation</a></li>
+        <li><a href="{{ "/analysis-tasks/jvm_heap_size_limit" | relative_url }}">JVM Size Limit</a></li>
+        <li><a href="{{ "/analysis-tasks/minimum_cpu_cores" | relative_url }}">Min CPU Cores</a></li>
+        <li><a href="{{ "/analysis-tasks/multiple_log_dirs" | relative_url }}">Multiple Log Dirs</a></li>
+        <li><a href="{{ "/analysis-tasks/rack_awareness" | relative_url }}">Rack Awareness</a></li>
+        <li><a href="{{ "/analysis-tasks/recent_log_errors" | relative_url }}">Log Errors</a></li>
+        <li><a href="{{ "/analysis-tasks/separate_listeners" | relative_url }}">Separate Listeners</a></li>
+        <li><a href="{{ "/analysis-tasks/thread_configuration" | relative_url }}">Thread Config</a></li>
+        <li class="nav-subsection">Configuration - KRaft</li>
+        <li><a href="{{ "/analysis-tasks/kraft_controller_ha_check" | relative_url }}">KRaft Controller HA</a></li>
+        <li class="nav-subsection">Configuration - ZooKeeper</li>
+        <li><a href="{{ "/analysis-tasks/zookeeper_ha_check" | relative_url }}">ZooKeeper HA</a></li>
+        <li><a href="{{ "/analysis-tasks/zookeeper_heap_memory" | relative_url }}">ZK Heap Memory</a></li>
+        <li><a href="{{ "/analysis-tasks/zookeeper_heap_preallocation" | relative_url }}">ZK Preallocation</a></li>
       </ul>
     </div>
     

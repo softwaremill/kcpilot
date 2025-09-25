@@ -149,6 +149,17 @@ body {
   font-weight: 500;
 }
 
+.nav-list .nav-subsection {
+  padding: 8px 20px 4px 30px;
+  color: var(--sidebar-section);
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
 /* Main content area */
 .main-content {
   flex: 1;
