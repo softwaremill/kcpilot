@@ -7,52 +7,50 @@ title: KafkaPilot
 
 **CLI-first Kafka health diagnostics tool for production environments**
 
-> ⚠️ **Innovation Hub Project**: This project is part of [SoftwareMill's Innovation Hub](https://softwaremill.com/innovation-hub/) and is currently in MVP stage. While functional, it may contain bugs and has significant room for improvement. We welcome feedback and contributions!
+> ⚠️ **Innovation Hub Project**: This project is part of SoftwareMill's Innovation Hub and is currently in MVP stage. While functional, it may contain bugs and has significant room for improvement. We welcome feedback and contributions!
 
 ## Intro
 
-KafkaPilot is a comprehensive Kafka health diagnostics tool that automatically collects cluster signals, identifies issues, and provides actionable remediation guidance. Built for operations teams and DevOps engineers managing production Kafka clusters.
+We're building KafkaPilot. A tool that proactively diagnoses and resolves common issues in Apache Kafka. We're starting with ~17 scenarios covering typical configuration, availability, and performance faults.
 
-KafkaPilot is fast and production-ready. The SSH-based collection system is designed for zero-downtime diagnostics, while our AI-powered analysis engine provides intelligent insights into cluster health and performance bottlenecks.
+### Examples we already cover:
 
-```bash
-# Scan your Kafka cluster in seconds
-kafkapilot scan --bastion kafka-prod --output kafka-health-report
+**JVM & Memory Configuration**
 
-# Analyze with AI-powered insights
-kafkapilot analyze ./kafka-health-report --report terminal
-```
+\- JVM Heap Memory Preallocation Check \- Ensures Xms equals Xmx for optimal performance  
+\- JVM Heap vs System Memory Ratio Check \- Verifies heap ≤ 25% of system RAM for page cache  
+\- JVM Heap Size Limit Check \- Prevents heap settings above 8GB to avoid performance issues
 
-KafkaPilot integrates seamlessly with your existing infrastructure, requiring only SSH access and standard monitoring tools. No agents, no cluster modifications - just comprehensive diagnostics when you need them.
+**High Availability & Clustering**
 
-**Seamless integration with your Kafka operations workflow:**
+\- Broker Count High Availability Check \- Analyzes broker count for HA considerations  
+\- ISR vs Replication Factor Margin Check \- Ensures adequate margin over min.insync.replicas  
+\- Zookeeper High Availability Configuration Check \- Prevents split-brain scenarios in ZK clusters  
+\- KRaft Controller Quorum High Availability Check \- Ensures proper KRaft controller quorum setup
 
-- **All major SSH configurations are supported** - Works with your existing bastion hosts, SSH keys, and access patterns. This is especially useful for organizations with strict security requirements.
-- **Zero cluster impact** - Read-only operations ensure your production environment remains unaffected during diagnostics.
-- **Comprehensive reporting** - Generate insights in multiple formats: terminal output, markdown reports, and structured JSON for integration with monitoring systems.
+**Security & Access Control**
 
-## Why KafkaPilot?
+\- Authentication and Authorization Configuration Check \- Blocks anonymous access  
+\- In-Transit Encryption Configuration Check \- Ensures secure communication  
+\- Rack Awareness Configuration Check \- Validates failure zone distribution
 
-- **🚀 Production-ready**: SSH-based collection with zero cluster impact
-- **🔍 Comprehensive diagnostics**: Collects configs, logs, metrics, and system information
-- **🤖 AI-powered analysis**: Intelligent issue identification and remediation guidance
-- **📊 Multiple report formats**: Terminal, markdown, and JSON outputs for any workflow
-- **🔒 Security-first**: Read-only operations, works with existing SSH infrastructure
-- **⚡ Fast execution**: Parallel collection and analysis for rapid insights
+**Performance & Resource Management**
 
-## When KafkaPilot Helps Your Business
+\- Thread Configuration Validation \- Validates network, I/O, and replication thread settings  
+\- Separate Client and Cluster Listeners Check \- Ensures separate listeners for optimal performance  
+\- Multiple Log Directories Configuration Check \- Detects complex log.dirs configurations  
+\- Minimum CPU Core Count Check \- Ensures at least 4 CPU cores per broker
 
-### 🚨 Production Issues
-When your Kafka cluster is experiencing problems, every minute counts. KafkaPilot quickly identifies the root cause and provides specific remediation steps, reducing MTTR and minimizing business impact.
+**Operational Health**
 
-### 📈 Performance Optimization
-Optimize your Kafka cluster's performance with detailed analysis of configuration, resource utilization, and architectural recommendations tailored to your workload patterns.
+\- Recent Log Error Detection \- Scans logs for ERROR/FATAL messages in last 24 hours
 
-### 🔧 Health Monitoring
-Regular health checks help prevent issues before they impact your business. KafkaPilot's comprehensive diagnostics ensure your Kafka infrastructure remains reliable.
+**Zookeeper-Specific**
 
-### 💰 Cost Optimization
-Identify overprovisioned resources, inefficient configurations, and optimization opportunities that can significantly reduce your infrastructure costs.
+\- Zookeeper Heap Memory Size Check \- Validates ZK heap ≤ 2GB for typical deployments  
+\- Zookeeper Heap Memory Preallocation Check \- Ensures ZK heap preallocation
+
+What’s next? Your priceless feedback\!
 
 ## Professional Kafka Services
 
@@ -63,7 +61,7 @@ Identify overprovisioned resources, inefficient configurations, and optimization
 - **24/7 Production Support** - Expert support when you need it most
 - **Training & Knowledge Transfer** - Empower your team with Kafka expertise
 
-[Contact our Kafka experts →](https://softwaremill.com/contact/?topic=kafka)
+[Contact our Kafka experts →](https://softwaremill.com/services/apache-kafka-services/)
 
 ## Code Preview
 
@@ -85,7 +83,7 @@ kafkapilot task list --detailed
 
 Depending on your role and needs, this documentation offers multiple learning paths:
 
-1. **Quick Start** - [Get up and running in 5 minutes](quickstart.html) with basic cluster scanning
+1. **Quick Start** - [Get up and running in 5 minutes](/quickstart) with basic cluster scanning
 2. **Comprehensive Tutorials** - Step-by-step guides for [common diagnostics scenarios](tutorials.html)
 3. **Production Examples** - [Real-world use cases](examples.html) and troubleshooting workflows
 4. **Advanced Configuration** - Deep dive into [AI analysis tasks](api.html) and custom reporting

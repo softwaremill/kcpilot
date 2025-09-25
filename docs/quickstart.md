@@ -4,8 +4,6 @@ title: Quick Start
 permalink: /quickstart/
 ---
 
-# Quick Start
-
 Get KafkaPilot running in under 5 minutes and perform your first Kafka cluster diagnostic.
 
 ## Prerequisites
@@ -16,7 +14,7 @@ Get KafkaPilot running in under 5 minutes and perform your first Kafka cluster d
 
 ## Installation
 
-### Option 1: Build from Source (Recommended)
+### Build from Source (Recommended)
 
 ```bash
 # Clone the repository
@@ -30,17 +28,6 @@ cargo build --release
 export PATH="$PATH:$(pwd)/target/release"
 ```
 
-### Option 2: Run from Source
-
-```bash
-# Clone and run directly with cargo
-git clone https://github.com/softwaremill/kafkapilot.git
-cd kafkapilot
-
-# Run without building
-cargo run --bin kafkapilot -- --help
-```
-
 ## First Scan
 
 ### Local Scan (from bastion host)
@@ -48,8 +35,9 @@ cargo run --bin kafkapilot -- --help
 If you're running directly on a machine that has access to your Kafka brokers:
 
 ```bash
-kafkapilot scan
+kafkapilot scan --broker kafka-poligon-dc1-1.c.sml-sandbox.internal:9092
 ```
+where `--broker` is an address to one of your brokers
 
 ### Remote Scan (through SSH bastion)
 
@@ -67,7 +55,7 @@ Host kafka-prod
 Then run the scan:
 
 ```bash
-kafkapilot scan --bastion kafka-prod
+kafkapilot scan --bastion kafka-prod --broker kafka-poligon-dc1-1.c.sml-sandbox.internal:9092
 ```
 
 ## Understanding the Output
@@ -106,9 +94,8 @@ export OPENAI_API_KEY=your_api_key_here
 # Analyze the collected data
 kafkapilot analyze ./kafka-scan-2024-01-15-14-30-45 --report terminal
 
-# Generate multiple report formats
-kafkapilot analyze ./kafka-scan-2024-01-15-14-30-45 --report terminal,markdown,json
 ```
+Possible report formats are: `terminal`, `markdown` or `json` 
 
 ### Test Specific Issues
 
@@ -117,8 +104,8 @@ kafkapilot analyze ./kafka-scan-2024-01-15-14-30-45 --report terminal,markdown,j
 kafkapilot task list
 
 # Test for specific configuration issues
-kafkapilot task test replication_factor ./kafka-scan-2024-01-15-14-30-45
-kafkapilot task test jvm_heap_size ./kafka-scan-2024-01-15-14-30-45
+kafkapilot task test minimum_cpu_cores ./kafka-scan-2024-01-15-14-30-45
+kafkapilot task test in_transit_encryption ./kafka-scan-2024-01-15-14-30-45
 ```
 
 ## Common Troubleshooting
@@ -140,17 +127,6 @@ Ensure your SSH user has appropriate permissions:
 - Access to log files (may require sudo)
 - Ability to run system commands like `ps`, `df`, `free`
 
-### No Data Collected
-
-If brokers aren't discovered automatically:
-
-```bash
-# Check cluster discovery
-kafkapilot scan --bastion kafka-prod --debug
-
-# Manual broker specification (future feature)
-# kafkapilot scan --bastion kafka-prod --brokers broker1,broker2,broker3
-```
 
 ## Next Steps
 
