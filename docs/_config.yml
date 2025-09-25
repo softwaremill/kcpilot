@@ -119,5 +119,3 @@ navigation:
       url: "/api"
     - title: "Examples"
       url: "/examples"
-    - title: "How-To Guides"
-      url: "/how-to"

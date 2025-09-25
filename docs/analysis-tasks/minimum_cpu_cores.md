@@ -64,6 +64,5 @@ analysis_tasks/configuration/general/minimum_cpu_cores.yaml
 ## Need Help?
 
 - Check the [main analysis tasks documentation](../)
-- Learn about [creating custom tasks](/how-to#custom-analysis-tasks)
 - See more [examples](/examples#analysis-tasks)
 

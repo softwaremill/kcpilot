@@ -170,5 +170,4 @@ kafkapilot analyze <snapshot> --llmdbg
 ## Next Steps
 
 - Review individual [task documentation](./authentication_authorization) for specific checks
-- Learn about [creating custom tasks](/how-to#custom-analysis-tasks)
 - See [examples](/examples#analysis-tasks) of task execution
