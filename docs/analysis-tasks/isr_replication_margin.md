@@ -4,8 +4,6 @@ title: ISR vs Replication Factor Margin Check
 permalink: /analysis-tasks/isr_replication_margin/
 ---
 
-# ISR vs Replication Factor Margin Check
-
 **Task ID:** `isr_replication_margin`  
 **Category:** configuration
 

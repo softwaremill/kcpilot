@@ -4,8 +4,6 @@ title: JVM Heap vs System Memory Ratio Check
 permalink: /analysis-tasks/jvm_heap_memory_ratio/
 ---
 
-# JVM Heap vs System Memory Ratio Check
-
 **Task ID:** `jvm_heap_memory_ratio`  
 **Category:** configuration
 

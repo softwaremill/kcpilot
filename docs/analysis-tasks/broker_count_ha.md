@@ -4,8 +4,6 @@ title: Broker Count High Availability Check
 permalink: /analysis-tasks/broker_count_ha/
 ---
 
-# Broker Count High Availability Check
-
 **Task ID:** `broker_count_ha`  
 **Category:** configuration
 

@@ -4,8 +4,6 @@ title: Zookeeper Heap Memory Size Check
 permalink: /analysis-tasks/zookeeper_heap_memory/
 ---
 
-# Zookeeper Heap Memory Size Check
-
 **Task ID:** `zookeeper_heap_memory`  
 **Category:** configuration
 

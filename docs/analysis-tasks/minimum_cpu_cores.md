@@ -4,8 +4,6 @@ title: Minimum CPU Core Count Check
 permalink: /analysis-tasks/minimum_cpu_cores/
 ---
 
-# Minimum CPU Core Count Check
-
 **Task ID:** `minimum_cpu_cores`  
 **Category:** configuration
 

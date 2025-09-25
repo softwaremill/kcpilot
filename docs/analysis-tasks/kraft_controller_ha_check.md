@@ -4,8 +4,6 @@ title: KRaft Controller Quorum High Availability Check
 permalink: /analysis-tasks/kraft_controller_ha_check/
 ---
 
-# KRaft Controller Quorum High Availability Check
-
 **Task ID:** `kraft_controller_ha_check`  
 **Category:** configuration
 

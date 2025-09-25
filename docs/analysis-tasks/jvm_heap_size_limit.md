@@ -4,8 +4,6 @@ title: JVM Heap Size Limit Check
 permalink: /analysis-tasks/jvm_heap_size_limit/
 ---
 
-# JVM Heap Size Limit Check
-
 **Task ID:** `jvm_heap_size_limit`  
 **Category:** configuration
 

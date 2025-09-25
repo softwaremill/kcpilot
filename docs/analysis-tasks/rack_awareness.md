@@ -4,8 +4,6 @@ title: Rack Awareness Configuration Check
 permalink: /analysis-tasks/rack_awareness/
 ---
 
-# Rack Awareness Configuration Check
-
 **Task ID:** `rack_awareness`  
 **Category:** configuration
 

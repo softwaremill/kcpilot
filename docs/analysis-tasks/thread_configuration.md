@@ -4,8 +4,6 @@ title: Thread Configuration Validation
 permalink: /analysis-tasks/thread_configuration/
 ---
 
-# Thread Configuration Validation
-
 **Task ID:** `thread_configuration`  
 **Category:** configuration
 

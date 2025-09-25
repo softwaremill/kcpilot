@@ -4,8 +4,6 @@ title: JVM Heap Memory Preallocation Check
 permalink: /analysis-tasks/jvm_heap_preallocation/
 ---
 
-# JVM Heap Memory Preallocation Check
-
 **Task ID:** `jvm_heap_preallocation`  
 **Category:** configuration
 

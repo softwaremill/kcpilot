@@ -4,8 +4,6 @@ title: Separate Client and Cluster Listeners Check
 permalink: /analysis-tasks/separate_listeners/
 ---
 
-# Separate Client and Cluster Listeners Check
-
 **Task ID:** `separate_listeners`  
 **Category:** configuration
 

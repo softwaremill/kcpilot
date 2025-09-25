@@ -4,8 +4,6 @@ title: Analysis Tasks
 permalink: /analysis-tasks/
 ---
 
-# Analysis Tasks
-
 KafkaPilot's analysis tasks are AI-powered diagnostic checks that examine your Kafka cluster's configuration, performance, and health. Each task is defined as a YAML file containing prompts and rules that guide the AI analysis engine to identify specific issues and provide remediation guidance.
 
 ## Overview

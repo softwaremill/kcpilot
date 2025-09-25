@@ -4,8 +4,6 @@ title: Authentication and Authorization Configuration Check
 permalink: /analysis-tasks/authentication_authorization/
 ---
 
-# Authentication and Authorization Configuration Check
-
 **Task ID:** `authentication_authorization`  
 **Category:** configuration
 

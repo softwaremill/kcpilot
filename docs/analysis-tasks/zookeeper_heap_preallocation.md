@@ -4,8 +4,6 @@ title: Zookeeper Heap Memory Preallocation Check
 permalink: /analysis-tasks/zookeeper_heap_preallocation/
 ---
 
-# Zookeeper Heap Memory Preallocation Check
-
 **Task ID:** `zookeeper_heap_preallocation`  
 **Category:** configuration
 

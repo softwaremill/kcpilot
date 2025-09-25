@@ -4,8 +4,6 @@ title: Recent Log Error Detection
 permalink: /analysis-tasks/recent_log_errors/
 ---
 
-# Recent Log Error Detection
-
 **Task ID:** `recent_log_errors`  
 **Category:** configuration
 

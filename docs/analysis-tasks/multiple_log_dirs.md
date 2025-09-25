@@ -4,8 +4,6 @@ title: Multiple Log Directories Configuration Check
 permalink: /analysis-tasks/multiple_log_dirs/
 ---
 
-# Multiple Log Directories Configuration Check
-
 **Task ID:** `multiple_log_dirs`  
 **Category:** configuration
 

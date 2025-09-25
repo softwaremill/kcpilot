@@ -4,8 +4,6 @@ title: In-Transit Encryption Configuration Check
 permalink: /analysis-tasks/in_transit_encryption/
 ---
 
-# In-Transit Encryption Configuration Check
-
 **Task ID:** `in_transit_encryption`  
 **Category:** configuration
 

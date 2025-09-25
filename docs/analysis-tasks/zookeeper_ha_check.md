@@ -4,8 +4,6 @@ title: Zookeeper High Availability Configuration Check
 permalink: /analysis-tasks/zookeeper_ha_check/
 ---
 
-# Zookeeper High Availability Configuration Check
-
 **Task ID:** `zookeeper_ha_check`  
 **Category:** configuration
 
