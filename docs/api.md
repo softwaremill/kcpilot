@@ -51,6 +51,7 @@ kafkapilot scan [OPTIONS]
 
 | Option | Description | Default |
 |--------|-------------|---------|
+| `--broker <HOST:PORT>` | **Required.** One or more broker addresses (comma-separated) | - |
 | `--bastion <HOST>` | SSH bastion host alias from `~/.ssh/config` | Local execution |
 | `--output <DIR>` | Output directory for collected data | `kafka-scan-<timestamp>` |
 | `--timeout <SECONDS>` | SSH operation timeout | `300` |
@@ -61,19 +62,19 @@ kafkapilot scan [OPTIONS]
 
 ```bash
 # Local scan (from bastion host)
-kafkapilot scan
+kafkapilot scan --broker kafka-broker-1.internal:9092
 
 # Remote scan via SSH bastion
-kafkapilot scan --bastion kafka-prod
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092
 
 # Custom output directory
-kafkapilot scan --bastion kafka-prod --output health-check-2024-01-15
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output health-check-2024-01-15
 
 # Parallel collection with timeout
-kafkapilot scan --bastion kafka-prod --parallel 3 --timeout 600
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --parallel 3 --timeout 600
 
 # Dry run to see what would be collected
-kafkapilot scan --bastion kafka-prod --dry-run
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --dry-run
 ```
 
 #### Output Structure
@@ -377,7 +378,7 @@ KafkaPilot uses standard exit codes to indicate execution status:
 
 ```bash
 #!/bin/bash
-kafkapilot scan --bastion kafka-prod --output health-check
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output health-check
 
 case $? in
   0)
@@ -473,10 +474,10 @@ Enable debug logging for troubleshooting:
 
 ```bash
 # Detailed execution logging
-RUST_LOG=kafkapilot=debug kafkapilot scan --bastion kafka-prod
+RUST_LOG=kafkapilot=debug kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092
 
 # Trace level (very verbose)
-RUST_LOG=trace kafkapilot scan --bastion kafka-prod
+RUST_LOG=trace kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092
 
 # LLM debugging
 LLM_DEBUG=true kafkapilot analyze ./kafka-scan-data
@@ -486,7 +487,7 @@ LLM_DEBUG=true kafkapilot analyze ./kafka-scan-data
 
 ```bash
 # Test SSH connectivity
-kafkapilot scan --bastion kafka-prod --dry-run
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --dry-run
 
 # Manual SSH test
 ssh kafka-prod "echo 'Connection successful'"
@@ -499,7 +500,7 @@ kafkapilot info --check-deps
 
 ```bash
 # Monitor scan progress
-kafkapilot scan --bastion kafka-prod --verbose
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --verbose
 
 # Time execution
 time kafkapilot analyze ./kafka-scan-data
@@ -526,7 +527,7 @@ OUTPUT_DIR="health-check-$(date +%Y%m%d-%H%M%S)"
 echo "Starting Kafka health check for $BASTION..."
 
 # Collect data
-kafkapilot scan --bastion "$BASTION" --output "$OUTPUT_DIR"
+kafkapilot scan --bastion "$BASTION" --broker kafka-broker-1.internal:9092 --output "$OUTPUT_DIR"
 
 # Analyze if API key available
 if [ -n "${OPENAI_API_KEY:-}" ]; then
@@ -604,4 +605,4 @@ if __name__ == '__main__':
 
 ---
 
-**Need more examples?** Check our [how-to guides](how-to.html) and [tutorials](tutorials.html) for practical usage patterns.
+**Need more examples?** Check our [examples](examples.html) for practical usage patterns.

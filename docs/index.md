@@ -67,7 +67,7 @@ What’s next? Your priceless feedback\!
 
 ```bash
 # Quick cluster health check
-kafkapilot scan --bastion kafka-prod
+kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092
 
 # Comprehensive analysis with AI insights
 kafkapilot analyze ./kafka-scan-2024-01-15 --report terminal,json
@@ -84,9 +84,8 @@ kafkapilot task list --detailed
 Depending on your role and needs, this documentation offers multiple learning paths:
 
 1. **Quick Start** - [Get up and running in 5 minutes](quickstart/) with basic cluster scanning
-2. **Comprehensive Tutorials** - Step-by-step guides for [common diagnostics scenarios](tutorials.html)
-3. **Production Examples** - [Real-world use cases](examples.html) and troubleshooting workflows
-4. **Advanced Configuration** - Deep dive into [AI analysis tasks](api.html) and custom reporting
+2. **Production Examples** - [Real-world use cases](examples.html) and troubleshooting workflows
+3. **Advanced Configuration** - Deep dive into [AI analysis tasks](api.html) and custom reporting
 
 ## Installation & Support
 

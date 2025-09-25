@@ -72,10 +72,6 @@ navigation:
     - title: "Installation"
       url: "/installation"
   
-  tutorials:
-    - title: "All Tutorials"
-      url: "/tutorials"
-  
   analysis_tasks:
     - title: "Overview"
       url: "/analysis-tasks"

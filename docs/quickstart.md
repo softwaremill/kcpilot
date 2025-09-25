@@ -131,7 +131,6 @@ Ensure your SSH user has appropriate permissions:
 ## Next Steps
 
 - **[Installation Guide](installation.html)** - Detailed installation options and configuration
-- **[Tutorials](tutorials.html)** - Step-by-step guides for common scenarios  
 - **[Examples](examples.html)** - Real-world troubleshooting workflows
 - **[API Reference](api.html)** - Complete command-line interface documentation
 
@@ -144,4 +143,4 @@ Ensure your SSH user has appropriate permissions:
 
 ---
 
-**Next**: Learn about [advanced installation options](installation.html) or dive into [detailed tutorials](tutorials.html).
+**Next**: Learn about [advanced installation options](installation.html) or explore [real-world examples](examples.html).

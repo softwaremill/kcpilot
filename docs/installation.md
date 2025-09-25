@@ -163,7 +163,6 @@ cat test-installation/COLLECTION_SUMMARY.md
 ## Next Steps
 
 - **[Quick Start](/quickstart)** - Get running in 5 minutes
-- **[Tutorials](tutorials.html)** - Learn common diagnostic workflows
 - **[Examples](examples.html)** - Real-world troubleshooting scenarios
 - **[API Reference](api.html)** - Complete command documentation
 
