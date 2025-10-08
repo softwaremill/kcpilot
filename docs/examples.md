@@ -502,6 +502,6 @@ def send_alert(finding):
 
 - **[How-To Guides](how-to.html)** - Quick solutions for specific problems
 - **[API Reference](api.html)** - Complete command documentation
-- **[Support](support.html)** - Get help with your specific use case
+- **[Support](https://softwaremill.com/services/apache-kafka-services/)** - Get help with your specific use case
 
 **Have a use case not covered here?** [Share it with the community](https://github.com/softwaremill/kafkapilot/discussions) or [request professional consulting](support.html).

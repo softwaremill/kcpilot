@@ -102,7 +102,7 @@ What’s next? Your priceless feedback\!
 kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092
 
 # Comprehensive analysis with AI insights
-kafkapilot analyze ./kafka-scan-2024-01-15 --report terminal,json
+kafkapilot analyze ./kafka-scan-2024-01-15 --report terminal
 
 # Test specific configuration issues
 kafkapilot task test replication_factor ./kafka-scan-2024-01-15
@@ -116,15 +116,15 @@ kafkapilot task list --detailed
 Depending on your role and needs, this documentation offers multiple learning paths:
 
 1. **Quick Start** - [Get up and running in 5 minutes](quickstart/) with basic cluster scanning
-2. **Production Examples** - [Real-world use cases](examples.html) and troubleshooting workflows
-3. **Advanced Configuration** - Deep dive into [AI analysis tasks](api.html) and custom reporting
+2. **Production Examples** - [Real-world use cases](https://softwaremill.github.io/kafkapilot/analysis-tasks/) and troubleshooting workflows
+3. **Advanced Configuration** - Deep dive into [AI analysis tasks](https://softwaremill.github.io/kafkapilot/api/#configuration-files) and custom reporting
 
 ## Installation & Support
 
-- **Installation Guide** - [Multiple installation options](installation.html) for different environments
-- **API Reference** - Complete [command-line interface documentation](api.html)
+- **Installation Guide** - [Multiple installation options](https://softwaremill.github.io/kafkapilot/installation/) for different environments
+- **API Reference** - Complete [command-line interface documentation](https://softwaremill.github.io/kafkapilot/api/#configuration-files)
 - **Community Support** - [GitHub issues](https://github.com/softwaremill/kafkapilot/issues) and discussions
-- **Professional Support** - [Enterprise support options](support.html) from SoftwareMill
+- **Professional Support** - [Enterprise support options](https://softwaremill.com/services/apache-kafka-services/) from SoftwareMill
 
 KafkaPilot is open source (Apache 2.0 license) and [available on GitHub](https://github.com/softwaremill/kafkapilot).
 

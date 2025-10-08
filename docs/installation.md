@@ -159,13 +159,6 @@ kafkapilot scan --broker kafka-poligon-dc1-1.c.sml-sandbox.internal:9092 --outpu
 ls -la test-installation/
 cat test-installation/COLLECTION_SUMMARY.md
 ```
-
-## Next Steps
-
-- **[Quick Start](/quickstart)** - Get running in 5 minutes
-- **[Examples](examples.html)** - Real-world troubleshooting scenarios
-- **[API Reference](api.html)** - Complete command documentation
-
 ---
 
-**Need help?** Check our [support options](support.html) or [report an issue](https://github.com/softwaremill/kafkapilot/issues).
+**Need help?** Check our [support options](https://softwaremill.com/services/apache-kafka-services/) or [report an issue](https://github.com/softwaremill/kafkapilot/issues).

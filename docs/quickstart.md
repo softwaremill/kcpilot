@@ -128,19 +128,10 @@ Ensure your SSH user has appropriate permissions:
 - Ability to run system commands like `ps`, `df`, `free`
 
 
-## Next Steps
-
-- **[Installation Guide](installation.html)** - Detailed installation options and configuration
-- **[Examples](examples.html)** - Real-world troubleshooting workflows
-- **[API Reference](api.html)** - Complete command-line interface documentation
-
 ## Getting Help
 
 - 📖 [Full Documentation](../)
 - 🐛 [Report Issues](https://github.com/softwaremill/kafkapilot/issues)
-- 💬 [GitHub Discussions](https://github.com/softwaremill/kafkapilot/discussions)
-- 🏢 [Professional Support](support.html)
+- 🏢 [Professional Support](https://softwaremill.com/services/apache-kafka-services/)
 
 ---
-
-**Next**: Learn about [advanced installation options](installation.html) or explore [real-world examples](examples.html).
