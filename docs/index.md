@@ -13,6 +13,38 @@ title: KafkaPilot
 
 We're building KafkaPilot. A tool that proactively diagnoses and resolves common issues in Apache Kafka. We're starting with ~17 scenarios covering typical configuration, availability, and performance faults.
 
+### What do we need from you?
+
+Your feedback.
+
+- What kinds of Kafka incidents tend to hit you the hardest?
+- What do you want a tool to auto-fix or explain when things break?
+- Anything else Kafka-related that drives you crazy?
+
+**Share your pain points here:** [contact form](https://softwaremill.com/services/apache-kafka-services/)
+
+
+### Why is it worth your time?
+
+Sharing your input with us you can:
+
+- Gain early access to the private KafkaPilot beta.
+- Receive priority treatment by having your responses mapped directly to our backlog.
+- Transform tribal knowledge into automated checks to scale expertise across teams with diagnostics.
+- Test scenarios across diverse environments for higher reliability.
+- Automate compliance with codified security and operational rules.
+- Reduce operational overhead through smart automation.
+- Accelerate onboarding with embedded best practices.
+
+### Why is KafkaPilot a Game-Changer?
+
+Our goal is to provide you with actionable insights when every minute counts. That’s why KafkaPilot is more than just a monitoring tool; it's your expert companion for Kafka health.
+
+- Zero-Impact Diagnostics: Our SSH-based system performs read-only operations to give deep insights without touching your production cluster.
+- Comprehensive Analysis: We collect and analyze everything, including configurations, logs, metrics, and system information, giving you the full picture.
+- Flexible Reporting: Get the data you need, in the format you want—from a quick terminal overview to detailed Markdown reports and structured JSON for automated workflows.
+- Built for Security: We integrate with your existing SSH infrastructure, ensuring your data stays secure.
+
 ### Examples we already cover:
 
 **JVM & Memory Configuration**
