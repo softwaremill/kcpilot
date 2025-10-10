@@ -28,8 +28,6 @@ cargo build --release
 ```bash
 # For AI-powered analysis (required for LLM features)
 export OPENAI_API_KEY=your_openai_api_key_here
-# Alternative LLM API key
-export LLM_API_KEY=your_alternative_llm_api_key
 
 # Optional LLM debugging
 export LLM_DEBUG=true
@@ -47,7 +45,7 @@ cargo run --bin kafkapilot -- scan --bastion kafka-poligon --broker kafka-broker
 cargo run --bin kafkapilot -- analyze ./test-scan --report terminal
 
 # 3. Generate markdown report
-cargo run --bin kafkapilot -- analyze ./test-scan --report markdown --output report.md
+cargo run --bin kafkapilot -- analyze ./test-scan --report markdown
 ```
 
 ## Commands Overview
@@ -84,10 +82,10 @@ RUST_LOG=kafkapilot=debug cargo run --bin kafkapilot -- scan --bastion kafka-pol
 cargo run --bin kafkapilot -- analyze ./test-scan
 
 # Generate JSON report
-cargo run --bin kafkapilot -- analyze ./test-scan --report json --output findings.json
+cargo run --bin kafkapilot -- analyze ./test-scan --report json 
 
 # Generate markdown report
-cargo run --bin kafkapilot -- analyze ./test-scan --report markdown --output report.md
+cargo run --bin kafkapilot -- analyze ./test-scan --report markdown
 
 # Enable LLM debug logging
 cargo run --bin kafkapilot -- analyze ./test-scan --llmdbg
@@ -110,8 +108,6 @@ cargo run --bin kafkapilot -- task test recent_log_errors ./test-scan
 # Show details of a specific task
 cargo run --bin kafkapilot -- task show recent_log_errors
 
-# Create new analysis task from template
-cargo run --bin kafkapilot -- task new --id custom-task --name "My Custom Analysis"
 ```
 
 ### Utility Commands
@@ -138,7 +134,7 @@ After building with `cargo build --release`, you can use the binary directly:
 export PATH="$PATH:$(pwd)/target/release"
 
 # Complete workflow: scan + analyze (remote)
-kafkapilot scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092 --output my-cluster-scan
+kafkapilot scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092 
 kafkapilot analyze ./my-cluster-scan --report terminal
 
 # Complete workflow: scan + analyze (local)
@@ -146,7 +142,7 @@ kafkapilot scan --broker kafka-broker-1.internal:9092 --output my-local-scan
 kafkapilot analyze ./my-local-scan --report terminal
 
 # Generate reports
-kafkapilot analyze ./my-cluster-scan --report markdown --output cluster-report.md
+kafkapilot analyze ./my-cluster-scan --report markdown 
 ```
 
 ### Prerequisites
