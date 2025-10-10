@@ -21,7 +21,7 @@ Your feedback.
 - What do you want a tool to auto-fix or explain when things break?
 - Anything else Kafka-related that drives you crazy?
 
-**Share your pain points here:** [contact form](https://softwaremill.com/services/apache-kafka-services/) or write us an [email](mailto:kafka-pilot\@softwaremill.com)
+**Share your pain points here:** [contact form](https://softwaremill.com/services/apache-kafka-services/) or write us an [email](mailto:kafka-pilot@softwaremill.com)
 
 
 ### Why is it worth your time?
