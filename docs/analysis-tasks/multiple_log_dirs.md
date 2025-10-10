@@ -61,8 +61,5 @@ analysis_tasks/configuration/general/multiple_log_dirs.yaml
 
 - [View all tasks](../)
 
-## Need Help?
 
-- Check the [main analysis tasks documentation](../)
-- See more [examples](/examples#analysis-tasks)
 

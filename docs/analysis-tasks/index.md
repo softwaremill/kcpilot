@@ -166,8 +166,4 @@ RUST_LOG=kafkapilot=debug kafkapilot task test <task-id> <snapshot>
 # Debug LLM interactions
 kafkapilot analyze <snapshot> --llmdbg
 ```
-
-## Next Steps
-
-- Review individual [task documentation](./authentication_authorization) for specific checks
-- See [examples](/examples#analysis-tasks) of task execution
+---

@@ -61,8 +61,5 @@ analysis_tasks/configuration/general/thread_configuration.yaml
 
 - [View all tasks](../)
 
-## Need Help?
 
-- Check the [main analysis tasks documentation](../)
-- See more [examples](/examples#analysis-tasks)
 

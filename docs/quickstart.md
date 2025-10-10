@@ -130,7 +130,6 @@ Ensure your SSH user has appropriate permissions:
 
 ## Getting Help
 
-- 📖 [Full Documentation](../)
 - 🐛 [Report Issues](https://github.com/softwaremill/kafkapilot/issues)
 - 🏢 [Professional Support](https://softwaremill.com/services/apache-kafka-services/)
 

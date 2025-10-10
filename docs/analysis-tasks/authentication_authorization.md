@@ -63,8 +63,5 @@ See also these related security tasks:
 - [authentication_authorization](../authentication_authorization)
 - [in_transit_encryption](../in_transit_encryption)
 
-## Need Help?
 
-- Check the [main analysis tasks documentation](../)
-- See more [examples](/examples#analysis-tasks)
 

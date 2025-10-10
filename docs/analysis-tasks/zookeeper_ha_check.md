@@ -64,8 +64,5 @@ See also these related ZooKeeper tasks:
 - [zookeeper_heap_memory](../zookeeper_heap_memory)
 - [zookeeper_heap_preallocation](../zookeeper_heap_preallocation)
 
-## Need Help?
 
-- Check the [main analysis tasks documentation](../)
-- See more [examples](/examples#analysis-tasks)
 

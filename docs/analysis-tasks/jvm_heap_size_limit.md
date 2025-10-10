@@ -64,8 +64,4 @@ See also these related JVM configuration tasks:
 - [jvm_heap_preallocation](../jvm_heap_preallocation)
 - [jvm_heap_size_limit](../jvm_heap_size_limit)
 
-## Need Help?
-
-- Check the [main analysis tasks documentation](../)
-- See more [examples](/examples#analysis-tasks)
 

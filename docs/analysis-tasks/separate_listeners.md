@@ -61,8 +61,4 @@ analysis_tasks/configuration/general/separate_listeners.yaml
 
 - [View all tasks](../)
 
-## Need Help?
-
-- Check the [main analysis tasks documentation](../)
-- See more [examples](/examples#analysis-tasks)
 

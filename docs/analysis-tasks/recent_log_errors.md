@@ -61,8 +61,5 @@ analysis_tasks/configuration/general/recent_log_errors.yaml
 
 - [View all tasks](../)
 
-## Need Help?
 
-- Check the [main analysis tasks documentation](../)
-- See more [examples](/examples#analysis-tasks)
 

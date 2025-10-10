@@ -64,8 +64,5 @@ See also these related high availability tasks:
 - [isr_replication_margin](../isr_replication_margin)
 - [rack_awareness](../rack_awareness)
 
-## Need Help?
 
-- Check the [main analysis tasks documentation](../)
-- See more [examples](/examples#analysis-tasks)
 
