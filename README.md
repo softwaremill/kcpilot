@@ -2,6 +2,11 @@
 
 A CLI-first Kafka health diagnostics tool that automatically collects cluster signals, identifies issues, and provides actionable remediation guidance. KafkaPilot combines SSH-based data collection with AI-powered analysis using LLM integration.
 
+> ⚠️ **Innovation Hub Project**: This project is part of SoftwareMill's Innovation Hub and is currently in MVP stage. While functional, it may contain bugs and has significant room for improvement. We welcome feedback and contributions!
+>
+> Treat this project as a base, invent your own tasks and share them with the world by opening a pull request.
+
+
 ## Features
 
 - **SSH-based data collection** - Collects comprehensive cluster data through SSH bastion hosts
