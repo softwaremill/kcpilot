@@ -24,7 +24,7 @@ We're building KafkaPilot. A tool that proactively diagnoses and resolves common
 <a href="https://forms.gle/2pEXQeNFr3Pw1gb56" class="cta-button" target="_blank">Share Your Feedback</a>
 
 <div class="alternative-contact">
-Or reach out directly: <a href="https://softwaremill.com/services/apache-kafka-services/">contact form</a> | <a href="mailto:kafka-pilot@softwaremill.com">email us</a>
+Or reach out directly via <a href="mailto:kafka-pilot@softwaremill.com">email</a>
 </div>
 
 </div>
