@@ -475,7 +475,7 @@ body {
   text-decoration: none !important;
   font-weight: 600;
   font-size: 16px;
-  margin: 10px 0 20px 0;
+  margin: 10px auto 30px auto;
   transition: all 0.2s ease;
   border-bottom: none !important;
   box-shadow: 0 2px 8px rgba(41, 128, 185, 0.3);
@@ -491,7 +491,9 @@ body {
 .feedback-cta .alternative-contact {
   color: var(--text-color);
   font-size: 14px;
-  margin-top: 16px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(41, 128, 185, 0.2);
 }
 
 .feedback-cta .alternative-contact a {
