@@ -15,15 +15,17 @@ title: KafkaPilot
 
 We're building KafkaPilot. A tool that proactively diagnoses and resolves common issues in Apache Kafka. We're starting with ~17 scenarios covering typical configuration, availability, and performance faults.
 
-<div class="feedback-cta" markdown="1">
+<div class="feedback-cta">
 
-### What do we need from you?
+<h3>What do we need from you?</h3>
 
-Your feedback. Tell us what your most common Kafka pain points are and help us create a tool that will make your work easier in the future. It will only take a minute.
+<p>Your feedback. Tell us what your most common Kafka pain points are and help us create a tool that will make your work easier in the future. It will only take a minute.</p>
 
 <a href="https://forms.gle/2pEXQeNFr3Pw1gb56" class="cta-button" target="_blank">Share Your Feedback</a>
 
-Or reach out directly: [contact form](https://softwaremill.com/services/apache-kafka-services/) | [email us](mailto:kafka-pilot@softwaremill.com)
+<div class="alternative-contact">
+Or reach out directly: <a href="https://softwaremill.com/services/apache-kafka-services/">contact form</a> | <a href="mailto:kafka-pilot@softwaremill.com">email us</a>
+</div>
 
 </div>
 
