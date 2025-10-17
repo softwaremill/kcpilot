@@ -429,6 +429,72 @@ body {
   }
 }
 
+/* Feedback CTA Box */
+.feedback-cta {
+  background: linear-gradient(135deg, #f0f8ff 0%, #e6f2ff 100%);
+  border: 2px solid var(--primary-blue);
+  border-radius: 12px;
+  padding: 32px;
+  margin: 40px 0;
+  box-shadow: 0 4px 12px rgba(41, 128, 185, 0.15);
+  position: relative;
+  overflow: hidden;
+}
+
+.feedback-cta::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary-blue), var(--sidebar-highlight));
+}
+
+.feedback-cta h3 {
+  color: var(--primary-blue);
+  font-size: 1.6rem;
+  margin-top: 0;
+  margin-bottom: 16px;
+  font-weight: 500;
+}
+
+.feedback-cta p {
+  color: var(--text-color);
+  line-height: 1.7;
+  margin-bottom: 16px;
+}
+
+.feedback-cta ul {
+  margin: 20px 0;
+  padding-left: 24px;
+}
+
+.feedback-cta li {
+  margin: 12px 0;
+  color: var(--text-color);
+  line-height: 1.6;
+}
+
+.feedback-cta strong {
+  color: var(--heading-color);
+  font-weight: 600;
+}
+
+.feedback-cta a {
+  color: var(--primary-blue);
+  font-weight: 500;
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.feedback-cta a:hover {
+  color: var(--dark-blue);
+  border-bottom-color: var(--dark-blue);
+  text-decoration: none;
+}
+
 /* Utility classes */
 .text-center { text-align: center; }
 .mb-0 { margin-bottom: 0; }
