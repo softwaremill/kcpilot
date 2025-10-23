@@ -1,8 +1,8 @@
-# KafkaPilot Design Document
+# KCPilot Design Document
 
 ## Executive Summary
 
-KafkaPilot is a CLI-first Kafka health diagnostics tool that automatically collects cluster signals, identifies issues, and provides actionable remediation guidance. The tool serves dual purposes: providing immediate value to users while serving as a lead generation channel for Kafka consulting services.
+KCPilot is a CLI-first Kafka health diagnostics tool that automatically collects cluster signals, identifies issues, and provides actionable remediation guidance. The tool serves dual purposes: providing immediate value to users while serving as a lead generation channel for Kafka consulting services.
 
 ### Core Value Proposition
 - **One-command health assessment** with zero configuration
@@ -54,29 +54,29 @@ KafkaPilot is a CLI-first Kafka health diagnostics tool that automatically colle
 
 ```bash
 # Scan locally when running directly on bastion
-kafkapilot scan
+kcpilot scan
 
 # Scan remotely via SSH bastion from ~/.ssh/config
-kafkapilot scan --bastion kafka-poligon
+kcpilot scan --bastion kafka-poligon
 
 # Scan with custom output directory
-kafkapilot scan --output /path/to/output
+kcpilot scan --output /path/to/output
 
 # Analyze existing scan data from folder
-kafkapilot analyze ./test-local-scan \
+kcpilot analyze ./test-local-scan \
   --report terminal,html,markdown
 
 # Watch cluster continuously (planned)
-kafkapilot watch --interval 60 --alert
+kcpilot watch --interval 60 --alert
 
 # Generate remediation scripts from scan data
-kafkapilot fix ./test-local-scan --dry-run
+kcpilot fix ./test-local-scan --dry-run
 ```
 
 ## Project Structure
 
 ```
-kafkapilot/
+kcpilot/
 ├── src/
 │   ├── main.rs              # Entry point
 │   ├── lib.rs               # Library exports
@@ -274,7 +274,7 @@ The analysis engine will produce:
 #### Terminal Report
 ```
 ╔════════════════════════════════════════════╗
-║        KafkaPilot Analysis Report          ║
+║        KCPilot Analysis Report             ║
 ╚════════════════════════════════════════════╝
 
 📊 Cluster Overview
@@ -298,7 +298,7 @@ The analysis engine will produce:
 └─ All other checks passed
 
 📝 Remediation Available
-Run: kafkapilot fix ./test-local-scan --issue DISK-001
+Run: kcpilot fix ./test-local-scan --issue DISK-001
 ```
 
 #### HTML Report
@@ -415,18 +415,18 @@ Integrating LLM capabilities unlocks advanced analysis that goes far beyond rule
 
 #### Interactive Troubleshooting
 ```bash
-$ kafkapilot analyze ./test-local-scan --interactive
+$ kcpilot analyze ./test-local-scan --interactive
 
-KafkaPilot> "Why is my consumer group lagging?"
+KCPilot> "Why is my consumer group lagging?"
 > Analyzing consumer group data...
 > I found that your consumer group 'payment-processor' is lagging because:
 > 1. Broker 13 (partition leader for 70% of partitions) has 95% CPU usage
 > 2. GC pauses on broker 13 are averaging 800ms every 30 seconds
 > 3. Your consumers are timing out during these pauses
-> 
+>
 > Recommended fix: Increase heap size on broker 13 or rebalance partition leadership
 
-KafkaPilot> "Show me the fix"
+KCPilot> "Show me the fix"
 > Generating remediation script...
 ```
 
@@ -458,7 +458,7 @@ KafkaPilot> "Show me the fix"
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                   KafkaPilot Analyzer                   │
+│                   KCPilot Analyzer                      │
 ├─────────────────────────────────────────────────────────┤
 │                                                         │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐ │

@@ -4,14 +4,14 @@ title: API Reference
 permalink: /api/
 ---
 
-Complete command-line interface documentation for KafkaPilot.
+Complete command-line interface documentation for KCPilot.
 
 ## Global Options
 
-All KafkaPilot commands support these global options:
+All KCPilot commands support these global options:
 
 ```bash
-kafkapilot [GLOBAL_OPTIONS] <COMMAND> [COMMAND_OPTIONS]
+kcpilot [GLOBAL_OPTIONS] <COMMAND> [COMMAND_OPTIONS]
 ```
 
 ### Global Flags
@@ -31,7 +31,7 @@ kafkapilot [GLOBAL_OPTIONS] <COMMAND> [COMMAND_OPTIONS]
 | `OPENAI_API_KEY` | OpenAI API key for AI analysis | - |
 | `LLM_API_KEY` | Alternative LLM API key | - |
 | `LLM_DEBUG` | Enable LLM debugging | `false` |
-| `KAFKAPILOT_OUTPUT_DIR` | Default output directory | `./` |
+| `KCPILOT_OUTPUT_DIR` | Default output directory | `./` |
 
 ---
 
@@ -42,7 +42,7 @@ kafkapilot [GLOBAL_OPTIONS] <COMMAND> [COMMAND_OPTIONS]
 Collect comprehensive data from Kafka cluster.
 
 ```bash
-kafkapilot scan [OPTIONS]
+kcpilot scan [OPTIONS]
 ```
 
 #### Options
@@ -60,19 +60,19 @@ kafkapilot scan [OPTIONS]
 
 ```bash
 # Local scan (from bastion host)
-kafkapilot scan --broker kafka-broker-1.internal:9092
+kcpilot scan --broker kafka-broker-1.internal:9092
 
 # Remote scan via SSH bastion
-kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092
+kcpilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092
 
 # Custom output directory
-kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output health-check-2024-01-15
+kcpilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --output health-check-2024-01-15
 
 # Parallel collection with timeout
-kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --parallel 3 --timeout 600
+kcpilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --parallel 3 --timeout 600
 
 # Dry run to see what would be collected
-kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --dry-run
+kcpilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092 --dry-run
 ```
 
 #### Output Structure
@@ -123,7 +123,7 @@ kafka-scan-TIMESTAMP/
 Analyze collected data using AI and generate insights.
 
 ```bash
-kafkapilot analyze [OPTIONS] <SCAN_DIRECTORY>
+kcpilot analyze [OPTIONS] <SCAN_DIRECTORY>
 ```
 
 #### Options
@@ -140,41 +140,41 @@ kafkapilot analyze [OPTIONS] <SCAN_DIRECTORY>
 
 **Terminal** - Interactive colored output for immediate viewing:
 ```bash
-kafkapilot analyze ./kafka-scan-data --report terminal
+kcpilot analyze ./kafka-scan-data --report terminal
 ```
 
 **Markdown** - Formatted report suitable for documentation:
 ```bash
-kafkapilot analyze ./kafka-scan-data --report markdown --output report.md
+kcpilot analyze ./kafka-scan-data --report markdown --output report.md
 ```
 
 **JSON** - Structured data for automation and integration:
 ```bash
-kafkapilot analyze ./kafka-scan-data --report json --output analysis.json
+kcpilot analyze ./kafka-scan-data --report json --output analysis.json
 ```
 
 **Multiple formats** - Generate all formats:
 ```bash
-kafkapilot analyze ./kafka-scan-data --report terminal,markdown,json
+kcpilot analyze ./kafka-scan-data --report terminal,markdown,json
 ```
 
 #### Examples
 
 ```bash
 # Basic analysis with terminal output
-kafkapilot analyze ./kafka-scan-20240115
+kcpilot analyze ./kafka-scan-20240115
 
 # Generate markdown report
-kafkapilot analyze ./kafka-scan-20240115 --report markdown
+kcpilot analyze ./kafka-scan-20240115 --report markdown
 
 # JSON output for automation
-kafkapilot analyze ./kafka-scan-20240115 --report json > analysis.json
+kcpilot analyze ./kafka-scan-20240115 --report json > analysis.json
 
 # Run specific analysis tasks only
-kafkapilot analyze ./kafka-scan-20240115 --tasks jvm_heap_memory,thread_configuration
+kcpilot analyze ./kafka-scan-20240115 --tasks jvm_heap_memory,thread_configuration
 
 # Extended timeout for large clusters
-kafkapilot analyze ./kafka-scan-20240115 --llm-timeout 120
+kcpilot analyze ./kafka-scan-20240115 --llm-timeout 120
 ```
 
 #### JSON Output Schema
@@ -184,7 +184,7 @@ kafkapilot analyze ./kafka-scan-20240115 --llm-timeout 120
   "metadata": {
     "scan_directory": "./kafka-scan-20240115",
     "analysis_timestamp": "2024-01-15T14:30:45Z",
-    "kafkapilot_version": "0.1.0",
+    "kcpilot_version": "0.1.0",
     "tasks_executed": ["task1", "task2", "..."]
   },
   "cluster_summary": {
@@ -224,7 +224,7 @@ kafkapilot analyze ./kafka-scan-20240115 --llm-timeout 120
 Manage and execute individual analysis tasks.
 
 ```bash
-kafkapilot task <SUBCOMMAND> [OPTIONS]
+kcpilot task <SUBCOMMAND> [OPTIONS]
 ```
 
 #### Subcommands
@@ -232,7 +232,7 @@ kafkapilot task <SUBCOMMAND> [OPTIONS]
 ##### `list` - List Available Tasks
 
 ```bash
-kafkapilot task list [OPTIONS]
+kcpilot task list [OPTIONS]
 ```
 
 **Options:**
@@ -242,19 +242,19 @@ kafkapilot task list [OPTIONS]
 **Examples:**
 ```bash
 # List all tasks
-kafkapilot task list
+kcpilot task list
 
 # Detailed task information
-kafkapilot task list --detailed
+kcpilot task list --detailed
 
 # Performance-related tasks only
-kafkapilot task list --category performance
+kcpilot task list --category performance
 ```
 
 ##### `test` - Execute Single Task
 
 ```bash
-kafkapilot task test <TASK_ID> <SCAN_DIRECTORY> [OPTIONS]
+kcpilot task test <TASK_ID> <SCAN_DIRECTORY> [OPTIONS]
 ```
 
 **Options:**
@@ -264,13 +264,13 @@ kafkapilot task test <TASK_ID> <SCAN_DIRECTORY> [OPTIONS]
 **Examples:**
 ```bash
 # Test JVM heap memory configuration
-kafkapilot task test jvm_heap_memory ./kafka-scan-data
+kcpilot task test jvm_heap_memory ./kafka-scan-data
 
 # Test with JSON output
-kafkapilot task test thread_configuration ./kafka-scan-data --output json
+kcpilot task test thread_configuration ./kafka-scan-data --output json
 
 # Extended timeout
-kafkapilot task test comprehensive_analysis ./kafka-scan-data --llm-timeout 180
+kcpilot task test comprehensive_analysis ./kafka-scan-data --llm-timeout 180
 ```
 
 ##### `new` - Create Custom Task (Future)
@@ -278,7 +278,7 @@ kafkapilot task test comprehensive_analysis ./kafka-scan-data --llm-timeout 180
 *Planned for future release*
 
 ```bash
-kafkapilot task new --id custom_check --name "Custom Check" --category compliance
+kcpilot task new --id custom_check --name "Custom Check" --category compliance
 ```
 
 #### Built-in Analysis Tasks
@@ -304,23 +304,23 @@ kafkapilot task new --id custom_check --name "Custom Check" --category complianc
 
 ### `info` - System Information
 
-Display KafkaPilot version and system information.
+Display KCPilot version and system information.
 
 ```bash
-kafkapilot info 
+kcpilot info
 ```
 #### Example
 
 ```bash
 # Basic version information
-kafkapilot info
+kcpilot info
 
 ```
 
 #### Output
 
 ```
-KafkaPilot v0.1.0
+KCPilot v0.1.0
 Kafka cluster health diagnostics and remediation tool
 
 Authors: SoftwareMill <hello@softwaremill.com>

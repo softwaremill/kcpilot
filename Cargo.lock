@@ -1442,7 +1442,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "kafkapilot"
+name = "kcpilot"
 version = "0.1.0"
 dependencies = [
  "anyhow",

@@ -4,7 +4,7 @@ title: Analysis Tasks
 permalink: /analysis-tasks/
 ---
 
-KafkaPilot's analysis tasks are AI-powered diagnostic checks that examine your Kafka cluster's configuration, performance, and health. Each task is defined as a YAML file containing prompts and rules that guide the AI analysis engine to identify specific issues and provide remediation guidance.
+KCPilot's analysis tasks are AI-powered diagnostic checks that examine your Kafka cluster's configuration, performance, and health. Each task is defined as a YAML file containing prompts and rules that guide the AI analysis engine to identify specific issues and provide remediation guidance.
 
 ## Overview
 
@@ -25,10 +25,10 @@ To see all available analysis tasks with their descriptions:
 
 ```bash
 # List all tasks
-kafkapilot task list
+kcpilot task list
 
 # List with detailed information
-kafkapilot task list --detailed
+kcpilot task list --detailed
 ```
 
 ### Execute a Single Task
@@ -37,13 +37,13 @@ To run a specific analysis task on collected scan data:
 
 ```bash
 # Test a single task
-kafkapilot task test <task-id> <snapshot-path>
+kcpilot task test <task-id> <snapshot-path>
 
 # Example: Test JVM heap configuration
-kafkapilot task test jvm_heap_memory_ratio ./scan-2024-01-15
+kcpilot task test jvm_heap_memory_ratio ./scan-2024-01-15
 
 # With debug logging
-RUST_LOG=kafkapilot=debug kafkapilot task test <task-id> <snapshot-path>
+RUST_LOG=kcpilot=debug kcpilot task test <task-id> <snapshot-path>
 ```
 
 ### Run Full Analysis
@@ -52,10 +52,10 @@ To execute all analysis tasks on a snapshot:
 
 ```bash
 # Analyze with terminal and markdown reports
-kafkapilot analyze <snapshot-path> --report terminal,markdown
+kcpilot analyze <snapshot-path> --report terminal,markdown
 
 # Example
-kafkapilot analyze ./scan-2024-01-15 --report terminal,markdown --output analysis-report.md
+kcpilot analyze ./scan-2024-01-15 --report terminal,markdown --output analysis-report.md
 ```
 
 ## Creating Custom Tasks
@@ -161,9 +161,9 @@ Enable detailed logging to troubleshoot task execution:
 
 ```bash
 # Debug specific task
-RUST_LOG=kafkapilot=debug kafkapilot task test <task-id> <snapshot>
+RUST_LOG=kcpilot=debug kcpilot task test <task-id> <snapshot>
 
 # Debug LLM interactions
-kafkapilot analyze <snapshot> --llmdbg
+kcpilot analyze <snapshot> --llmdbg
 ```
 ---

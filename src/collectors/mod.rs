@@ -82,7 +82,7 @@ impl Default for KafkaConfig {
             ssl_cert: None,
             ssl_key: None,
             timeout_secs: 30,
-            client_id: "kafkapilot".to_string(),
+            client_id: "kcpilot".to_string(),
         }
     }
 }

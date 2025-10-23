@@ -1,22 +1,22 @@
 # AI-Powered Analysis Tasks
 
-This directory contains YAML task definitions for KafkaPilot's AI-powered analysis system. Each YAML file defines a specific analysis task that will be executed by the AI.
+This directory contains YAML task definitions for KCPilot's AI-powered analysis system. Each YAML file defines a specific analysis task that will be executed by the AI.
 
 ## 🚀 Quick Start
 
 1. **View available tasks:**
    ```bash
-   kafkapilot task list
+   kcpilot task list
    ```
 
 2. **Test a specific task:**
    ```bash
-   kafkapilot task test <task_id> <snapshot_path>
+   kcpilot task test <task_id> <snapshot_path>
    ```
 
 3. **Create a new task:**
    ```bash
-   kafkapilot task new my_custom_check --name "My Custom Check"
+   kcpilot task new my_custom_check --name "My Custom Check"
    ```
 
 ## 📝 Task Structure
@@ -165,10 +165,10 @@ Test a task against a snapshot:
 
 ```bash
 # Test with debug output
-kafkapilot task test security_audit snapshot.json --debug
+kcpilot task test security_audit snapshot.json --debug
 
 # Test against a scan directory
-kafkapilot task test disk_usage /path/to/scan/output/
+kcpilot task test disk_usage /path/to/scan/output/
 ```
 
 ## 💡 Tips

@@ -96,7 +96,7 @@ impl AiExecutor {
         
         let response = self.llm_service.chat(vec![
             crate::llm::service::ChatMessage::system(
-                "You are KafkaPilot, an expert Kafka administrator analyzing cluster health. \
+                "You are KCPilot, an expert Kafka administrator analyzing cluster health. \
                  Always respond with valid JSON containing a 'findings' array."
             ),
             crate::llm::service::ChatMessage::user(&full_prompt),
@@ -184,7 +184,7 @@ impl AiExecutor {
         
         let response = self.llm_service.chat(vec![
             crate::llm::service::ChatMessage::system(
-                "You are KafkaPilot, an expert Kafka administrator analyzing cluster health. \
+                "You are KCPilot, an expert Kafka administrator analyzing cluster health. \
                  Always respond with valid JSON containing a 'findings' array."
             ),
             crate::llm::service::ChatMessage::user(&full_prompt),
