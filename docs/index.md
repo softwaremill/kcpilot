@@ -145,4 +145,10 @@ SoftwareMill is a leader in Scala and Kafka ecosystem projects:
 
 ---
 
+## Trademark Notice
+
+Apache®, Apache Kafka®, and Kafka® are either registered trademarks or trademarks of the Apache Software Foundation in the United States and/or other countries. This project is not affiliated with, endorsed by, or sponsored by the Apache Software Foundation. For more information about Apache trademarks, please see the [Apache Trademark Policy](https://www.apache.org/foundation/marks/).
+
+---
+
 *Built with ❤️ by the [SoftwareMill](https://softwaremill.com) team*

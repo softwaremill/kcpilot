@@ -278,6 +278,10 @@ For large clusters that exceed LLM token limits, KCPilot automatically:
 
 We offer commercial support for Kafka and related technologies, as well as development services. Contact us to learn more about our offer!
 
+## Trademark Notice
+
+Apache®, Apache Kafka®, and Kafka® are either registered trademarks or trademarks of the Apache Software Foundation in the United States and/or other countries. This project is not affiliated with, endorsed by, or sponsored by the Apache Software Foundation. For more information about Apache trademarks, please see the [Apache Trademark Policy](https://www.apache.org/foundation/marks/).
+
 ## Copyright
 
 Copyright (C) 2025 SoftwareMill https://softwaremill.com.

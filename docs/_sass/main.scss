@@ -508,6 +508,32 @@ body {
   border-bottom-color: var(--dark-blue);
 }
 
+/* Footer */
+.content-footer {
+  margin-top: 60px;
+  padding-top: 30px;
+  border-top: 1px solid var(--border-color);
+}
+
+.trademark-notice {
+  font-size: 13px;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.trademark-notice a {
+  color: var(--primary-blue);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.trademark-notice a:hover {
+  color: var(--dark-blue);
+  border-bottom-color: var(--dark-blue);
+}
+
 /* Utility classes */
 .text-center { text-align: center; }
 .mb-0 { margin-bottom: 0; }
