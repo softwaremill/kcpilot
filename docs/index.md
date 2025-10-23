@@ -24,7 +24,7 @@ We're building KCPilot. A tool that proactively diagnoses and resolves common is
 <a href="https://forms.gle/2pEXQeNFr3Pw1gb56" class="cta-button" target="_blank">Share Your Feedback</a>
 
 <div class="alternative-contact">
-Or reach out directly via <a href="mailto:kafka-pilot@softwaremill.com">email</a>
+Or reach out directly via <a href="mailto:kcpilot@softwaremill.com">email</a>
 </div>
 
 </div>
