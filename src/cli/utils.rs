@@ -35,7 +35,7 @@ pub fn init_logging(verbose: bool, log_format: &str) {
 }
 
 pub fn print_info() {
-    println!("KafkaPilot v{}", env!("CARGO_PKG_VERSION"));
+    println!("KCPilot v{}", env!("CARGO_PKG_VERSION"));
     println!("{}", env!("CARGO_PKG_DESCRIPTION"));
     println!();
     println!("Authors: {}", env!("CARGO_PKG_AUTHORS"));

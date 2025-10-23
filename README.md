@@ -1,6 +1,6 @@
-# KafkaPilot
+# KCPilot
 
-A CLI-first Kafka health diagnostics tool that automatically collects cluster signals, identifies issues, and provides actionable remediation guidance. KafkaPilot combines SSH-based data collection with AI-powered analysis using LLM integration.
+A CLI-first Kafka Cluster health diagnostics tool that automatically collects cluster signals, identifies issues, and provides actionable remediation guidance. KCPilot combines SSH-based data collection with AI-powered analysis using LLM integration.
 
 > ⚠️ **Innovation Hub Project**: This project is part of SoftwareMill's Innovation Hub and is currently in MVP stage. While functional, it may contain bugs and has significant room for improvement. We welcome feedback and contributions!
 >
@@ -24,7 +24,7 @@ A CLI-first Kafka health diagnostics tool that automatically collects cluster si
 # Build from source
 cargo build --release
 
-# The binary will be available at target/release/kafkapilot
+# The binary will be available at target/release/kcpilot
 ```
 
 ## Environment Configuration
@@ -40,17 +40,17 @@ export LLM_DEBUG=true
 
 ## Quick Start
 
-You can run KafkaPilot directly from source using `cargo run`:
+You can run KCPilot directly from source using `cargo run`:
 
 ```bash
 # 1. Scan a cluster (data collection)
-cargo run --bin kafkapilot -- scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092 --output test-scan
+cargo run --bin kcpilot -- scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092 --output test-scan
 
 # 2. Analyze the collected data with AI
-cargo run --bin kafkapilot -- analyze ./test-scan --report terminal
+cargo run --bin kcpilot -- analyze ./test-scan --report terminal
 
 # 3. Generate markdown report
-cargo run --bin kafkapilot -- analyze ./test-scan --report markdown
+cargo run --bin kcpilot -- analyze ./test-scan --report markdown
 ```
 
 ## Commands Overview
@@ -60,74 +60,74 @@ cargo run --bin kafkapilot -- analyze ./test-scan --report markdown
 #### Local Scan (running directly on bastion host)
 ```bash
 # Basic local scan - must specify at least one broker
-cargo run --bin kafkapilot -- scan --broker kafka-broker-1.internal:9092
+cargo run --bin kcpilot -- scan --broker kafka-broker-1.internal:9092
 
 # Local scan with custom output directory
-cargo run --bin kafkapilot -- scan --broker kafka-broker-1.internal:9092 --output my-cluster-scan
+cargo run --bin kcpilot -- scan --broker kafka-broker-1.internal:9092 --output my-cluster-scan
 
 # With debug logging
-RUST_LOG=kafkapilot=debug cargo run --bin kafkapilot -- scan --broker kafka-broker-1.internal:9092
+RUST_LOG=kcpilot=debug cargo run --bin kcpilot -- scan --broker kafka-broker-1.internal:9092
 ```
 
 #### Remote Scan (via SSH bastion)
 ```bash
 # Basic remote scan - requires both bastion and broker
-cargo run --bin kafkapilot -- scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092
+cargo run --bin kcpilot -- scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092
 
 # Remote scan with custom output directory
-cargo run --bin kafkapilot -- scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092 --output test-scan
+cargo run --bin kcpilot -- scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092 --output test-scan
 
 # With debug logging
-RUST_LOG=kafkapilot=debug cargo run --bin kafkapilot -- scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092
+RUST_LOG=kcpilot=debug cargo run --bin kcpilot -- scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092
 ```
 
 ### Analysis
 ```bash
 # Analyze collected data (terminal output)
-cargo run --bin kafkapilot -- analyze ./test-scan
+cargo run --bin kcpilot -- analyze ./test-scan
 
 # Generate JSON report
-cargo run --bin kafkapilot -- analyze ./test-scan --report json 
+cargo run --bin kcpilot -- analyze ./test-scan --report json
 
 # Generate markdown report
-cargo run --bin kafkapilot -- analyze ./test-scan --report markdown
+cargo run --bin kcpilot -- analyze ./test-scan --report markdown
 
 # Enable LLM debug logging
-cargo run --bin kafkapilot -- analyze ./test-scan --llmdbg
+cargo run --bin kcpilot -- analyze ./test-scan --llmdbg
 
 # Custom LLM timeout (default: 300s)
-cargo run --bin kafkapilot -- analyze ./test-scan --llm-timeout 600
+cargo run --bin kcpilot -- analyze ./test-scan --llm-timeout 600
 ```
 
 ### Analysis Task Management
 ```bash
 # List all available analysis tasks
-cargo run --bin kafkapilot -- task list
+cargo run --bin kcpilot -- task list
 
 # List tasks with detailed information
-cargo run --bin kafkapilot -- task list --detailed
+cargo run --bin kcpilot -- task list --detailed
 
 # Test a specific analysis task
-cargo run --bin kafkapilot -- task test recent_log_errors ./test-scan
+cargo run --bin kcpilot -- task test recent_log_errors ./test-scan
 
 # Show details of a specific task
-cargo run --bin kafkapilot -- task show recent_log_errors
+cargo run --bin kcpilot -- task show recent_log_errors
 
 ```
 
 ### Utility Commands
 ```bash
 # Test SSH connectivity to brokers
-cargo run --bin kafkapilot -- test-ssh --bastion kafka-poligon --broker kafka-broker-1.internal:9092
+cargo run --bin kcpilot -- test-ssh --bastion kafka-poligon --broker kafka-broker-1.internal:9092
 
 # Show configuration
-cargo run --bin kafkapilot -- config
+cargo run --bin kcpilot -- config
 
 # Show help
-cargo run --bin kafkapilot -- --help
+cargo run --bin kcpilot -- --help
 
 # Show version and info
-cargo run --bin kafkapilot -- info
+cargo run --bin kcpilot -- info
 ```
 
 ## Using the Compiled Binary
@@ -139,15 +139,15 @@ After building with `cargo build --release`, you can use the binary directly:
 export PATH="$PATH:$(pwd)/target/release"
 
 # Complete workflow: scan + analyze (remote)
-kafkapilot scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092 
-kafkapilot analyze ./my-cluster-scan --report terminal
+kcpilot scan --bastion kafka-poligon --broker kafka-broker-1.internal:9092
+kcpilot analyze ./my-cluster-scan --report terminal
 
 # Complete workflow: scan + analyze (local)
-kafkapilot scan --broker kafka-broker-1.internal:9092 --output my-local-scan
-kafkapilot analyze ./my-local-scan --report terminal
+kcpilot scan --broker kafka-broker-1.internal:9092 --output my-local-scan
+kcpilot analyze ./my-local-scan --report terminal
 
 # Generate reports
-kafkapilot analyze ./my-cluster-scan --report markdown 
+kcpilot analyze ./my-cluster-scan --report markdown 
 ```
 
 ### Prerequisites
@@ -221,7 +221,7 @@ kafka-scan-TIMESTAMP/
 
 ## Analysis Tasks System
 
-KafkaPilot uses a sophisticated analysis system powered by YAML-defined tasks that leverage AI for intelligent cluster diagnostics.
+KCPilot uses a sophisticated analysis system powered by YAML-defined tasks that leverage AI for intelligent cluster diagnostics.
 
 ### Built-in Analysis Tasks
 
@@ -268,7 +268,7 @@ enabled: true
 
 ### Per-Broker Analysis
 
-For large clusters that exceed LLM token limits, KafkaPilot automatically:
+For large clusters that exceed LLM token limits, KCPilot automatically:
 - Processes each broker individually when `per_broker_analysis: true`
 - Filters data to only include relevant information (logs + configs for log analysis)
 - Combines findings from all brokers into a comprehensive report

@@ -1,12 +1,12 @@
 # Site settings
-title: KafkaPilot
+title: KCPilot
 description: >-
   CLI-first Kafka health diagnostics tool for production environments.
-  Automatically collects cluster signals, identifies issues, and provides 
+  Automatically collects cluster signals, identifies issues, and provides
   actionable remediation guidance.
 
 url: "https://softwaremill.github.io"
-baseurl: "/kafkapilot"
+baseurl: "/kcpilot"
 version: "1.0.0"
 
 # Build settings

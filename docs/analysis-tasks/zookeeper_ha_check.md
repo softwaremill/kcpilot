@@ -17,13 +17,13 @@ Execute this specific analysis task on your Kafka cluster snapshot:
 
 ```bash
 # Run the task
-kafkapilot task test zookeeper_ha_check <snapshot-path>
+kcpilot task test zookeeper_ha_check <snapshot-path>
 
 # Example
-kafkapilot task test zookeeper_ha_check ./kafka-scan-2024-01-15
+kcpilot task test zookeeper_ha_check ./kafka-scan-2024-01-15
 
 # With debug logging
-RUST_LOG=kafkapilot=debug kafkapilot task test zookeeper_ha_check <snapshot-path>
+RUST_LOG=kcpilot=debug kcpilot task test zookeeper_ha_check <snapshot-path>
 ```
 
 ## Data Requirements
@@ -47,7 +47,7 @@ The severity is determined based on specific patterns and thresholds identified 
 This task is automatically included when running a complete cluster analysis:
 
 ```bash
-kafkapilot analyze <snapshot-path> --report terminal,markdown
+kcpilot analyze <snapshot-path> --report terminal,markdown
 ```
 
 ## Task Configuration

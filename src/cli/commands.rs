@@ -3,7 +3,7 @@ use std::path::PathBuf;
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "kafkapilot",
+    name = "kcpilot",
     about = "Kafka cluster health diagnostics and remediation tool",
     version,
     author
@@ -63,10 +63,10 @@ pub enum Commands {
     
     
     
-    /// Display current KafkaPilot configuration
+    /// Display current KCPilot configuration
     Config,
-    
-    /// Show information about KafkaPilot
+
+    /// Show information about KCPilot
     Info,
     
     /// Manage analysis tasks

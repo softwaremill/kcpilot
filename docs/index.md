@@ -1,9 +1,9 @@
 ---
 layout: home
-title: KafkaPilot
+title: KCPilot
 ---
 
-# KafkaPilot
+# KCPilot
 
 **CLI-first Kafka health diagnostics tool for production environments**
 
@@ -13,7 +13,7 @@ title: KafkaPilot
 
 ## Intro
 
-We're building KafkaPilot. A tool that proactively diagnoses and resolves common issues in Apache Kafka. We're starting with ~17 scenarios covering typical configuration, availability, and performance faults.
+We're building KCPilot. A tool that proactively diagnoses and resolves common issues in Apache Kafka. We're starting with ~17 scenarios covering typical configuration, availability, and performance faults.
 
 <div class="feedback-cta">
 
@@ -34,7 +34,7 @@ Or reach out directly via <a href="mailto:kafka-pilot@softwaremill.com">email</a
 
 Sharing your input with us you can:
 
-- Gain early access to the private KafkaPilot beta.
+- Gain early access to the private KCPilot beta.
 - Receive priority treatment by having your responses mapped directly to our backlog.
 - Transform tribal knowledge into automated checks to scale expertise across teams with diagnostics.
 - Test scenarios across diverse environments for higher reliability.
@@ -42,9 +42,9 @@ Sharing your input with us you can:
 - Reduce operational overhead through smart automation.
 - Accelerate onboarding with embedded best practices.
 
-### Why is KafkaPilot a Game-Changer?
+### Why is KCPilot a Game-Changer?
 
-Our goal is to provide you with actionable insights when every minute counts. That’s why KafkaPilot is more than just a monitoring tool; it's your expert companion for Kafka health.
+Our goal is to provide you with actionable insights when every minute counts. That's why KCPilot is more than just a monitoring tool; it's your expert companion for Kafka health.
 
 - Zero-Impact Diagnostics: Our SSH-based system performs read-only operations to give deep insights without touching your production cluster.
 - Comprehensive Analysis: We collect and analyze everything, including configurations, logs, metrics, and system information, giving you the full picture.
@@ -105,16 +105,16 @@ What’s next? Your priceless feedback\!
 
 ```bash
 # Quick cluster health check
-kafkapilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092
+kcpilot scan --bastion kafka-prod --broker kafka-broker-1.internal:9092
 
 # Comprehensive analysis with AI insights
-kafkapilot analyze ./kafka-scan-2024-01-15 --report terminal
+kcpilot analyze ./kafka-scan-2024-01-15 --report terminal
 
 # Test specific configuration issues
-kafkapilot task test replication_factor ./kafka-scan-2024-01-15
+kcpilot task test replication_factor ./kafka-scan-2024-01-15
 
 # List all available analysis tasks
-kafkapilot task list --detailed
+kcpilot task list --detailed
 ```
 
 ## Getting Started
@@ -122,17 +122,17 @@ kafkapilot task list --detailed
 Depending on your role and needs, this documentation offers multiple learning paths:
 
 1. **Quick Start** - [Get up and running in 5 minutes](quickstart/) with basic cluster scanning
-2. **Production Examples** - [Real-world use cases](https://softwaremill.github.io/kafkapilot/analysis-tasks/) and troubleshooting workflows
-3. **Advanced Configuration** - Deep dive into [AI analysis tasks](https://softwaremill.github.io/kafkapilot/api/#configuration-files) and custom reporting
+2. **Production Examples** - [Real-world use cases](https://softwaremill.github.io/kcpilot/analysis-tasks/) and troubleshooting workflows
+3. **Advanced Configuration** - Deep dive into [AI analysis tasks](https://softwaremill.github.io/kcpilot/api/#configuration-files) and custom reporting
 
 ## Installation & Support
 
-- **Installation Guide** - [Multiple installation options](https://softwaremill.github.io/kafkapilot/installation/) for different environments
-- **API Reference** - Complete [command-line interface documentation](https://softwaremill.github.io/kafkapilot/api/#configuration-files)
-- **Community Support** - [GitHub issues](https://github.com/softwaremill/kafkapilot/issues) and discussions
+- **Installation Guide** - [Multiple installation options](https://softwaremill.github.io/kcpilot/installation/) for different environments
+- **API Reference** - Complete [command-line interface documentation](https://softwaremill.github.io/kcpilot/api/#configuration-files)
+- **Community Support** - [GitHub issues](https://github.com/softwaremill/kcpilot/issues) and discussions
 - **Professional Support** - [Enterprise support options](https://softwaremill.com/services/apache-kafka-services/) from SoftwareMill
 
-KafkaPilot is open source (Apache 2.0 license) and [available on GitHub](https://github.com/softwaremill/kafkapilot).
+KCPilot is open source (Apache 2.0 license) and [available on GitHub](https://github.com/softwaremill/kcpilot).
 
 ## Other SoftwareMill Projects
 

@@ -99,8 +99,8 @@ impl Scanner {
                  • Use --broker hostname:port to specify a single broker for cluster discovery\n\
                  • Ensure kafkactl is installed and configured on the bastion host\n\n\
                  Examples:\n\
-                 • kafkapilot scan --bastion my-bastion --broker kafka1.example.com:9092\n\
-                 • kafkapilot scan --bastion my-bastion  # (requires kafkactl)"
+                 • kcpilot scan --bastion my-bastion --broker kafka1.example.com:9092\n\
+                 • kcpilot scan --bastion my-bastion  # (requires kafkactl)"
             ));
         }
         
@@ -262,7 +262,7 @@ impl Scanner {
         
         // Phase 1: Setup
         println!("═══════════════════════════════════════════════════════════════");
-        println!("        KAFKAPILOT COMPREHENSIVE CLUSTER SCAN");
+        println!("        KCPILOT COMPREHENSIVE CLUSTER SCAN");
         println!("═══════════════════════════════════════════════════════════════");
         println!();
         

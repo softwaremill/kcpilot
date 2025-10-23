@@ -4,7 +4,7 @@ title: Quick Start
 permalink: /quickstart/
 ---
 
-Get KafkaPilot running in under 5 minutes and perform your first Kafka cluster diagnostic.
+Get KCPilot running in under 5 minutes and perform your first Kafka cluster diagnostic.
 
 ## Prerequisites
 
@@ -18,8 +18,8 @@ Get KafkaPilot running in under 5 minutes and perform your first Kafka cluster d
 
 ```bash
 # Clone the repository
-git clone https://github.com/softwaremill/kafkapilot.git
-cd kafkapilot
+git clone https://github.com/softwaremill/kcpilot.git
+cd kcpilot
 
 # Build the binary
 cargo build --release
@@ -35,7 +35,7 @@ export PATH="$PATH:$(pwd)/target/release"
 If you're running directly on a machine that has access to your Kafka brokers:
 
 ```bash
-kafkapilot scan --broker kafka-poligon-dc1-1.c.sml-sandbox.internal:9092
+kcpilot scan --broker kafka-poligon-dc1-1.c.sml-sandbox.internal:9092
 ```
 where `--broker` is an address to one of your brokers
 
@@ -55,12 +55,12 @@ Host kafka-prod
 Then run the scan:
 
 ```bash
-kafkapilot scan --bastion kafka-prod --broker kafka-poligon-dc1-1.c.sml-sandbox.internal:9092
+kcpilot scan --bastion kafka-prod --broker kafka-poligon-dc1-1.c.sml-sandbox.internal:9092
 ```
 
 ## Understanding the Output
 
-KafkaPilot creates a timestamped directory with all collected data:
+KCPilot creates a timestamped directory with all collected data:
 
 ```
 kafka-scan-2024-01-15-14-30-45/
@@ -92,20 +92,20 @@ cat ./kafka-scan-*/COLLECTION_SUMMARY.md
 export OPENAI_API_KEY=your_api_key_here
 
 # Analyze the collected data
-kafkapilot analyze ./kafka-scan-2024-01-15-14-30-45 --report terminal
+kcpilot analyze ./kafka-scan-2024-01-15-14-30-45 --report terminal
 
 ```
-Possible report formats are: `terminal`, `markdown` or `json` 
+Possible report formats are: `terminal`, `markdown` or `json`
 
 ### Test Specific Issues
 
 ```bash
 # List available analysis tasks
-kafkapilot task list
+kcpilot task list
 
 # Test for specific configuration issues
-kafkapilot task test minimum_cpu_cores ./kafka-scan-2024-01-15-14-30-45
-kafkapilot task test in_transit_encryption ./kafka-scan-2024-01-15-14-30-45
+kcpilot task test minimum_cpu_cores ./kafka-scan-2024-01-15-14-30-45
+kcpilot task test in_transit_encryption ./kafka-scan-2024-01-15-14-30-45
 ```
 
 ## Common Troubleshooting
@@ -130,7 +130,7 @@ Ensure your SSH user has appropriate permissions:
 
 ## Getting Help
 
-- 🐛 [Report Issues](https://github.com/softwaremill/kafkapilot/issues)
+- 🐛 [Report Issues](https://github.com/softwaremill/kcpilot/issues)
 - 🏢 [Professional Support](https://softwaremill.com/services/apache-kafka-services/)
 
 ---

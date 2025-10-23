@@ -3,7 +3,7 @@ use crate::scan::{Scanner, types::BrokerInfo};
 use crate::scan::bastion::{run_ssh_diagnostics, test_broker_access};
 
 pub async fn handle_ssh_test_command(bastion: Option<String>) -> Result<()> {
-    println!("🔍 KafkaPilot SSH Connectivity Test");
+    println!("🔍 KCPilot SSH Connectivity Test");
     println!("═══════════════════════════════════════");
 
     let scanner = Scanner::new(bastion.clone())?;

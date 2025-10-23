@@ -5,13 +5,13 @@ pub fn handle_config_command() -> Result<()> {
     // Load .env file if it exists
     let env_file_loaded = dotenv::dotenv().is_ok();
     
-    println!("🔧 KafkaPilot Configuration");
+    println!("🔧 KCPilot Configuration");
     println!("═══════════════════════════════════════");
     println!();
-    
+
     // Display version information
     println!("📦 Version Information:");
-    println!("  • KafkaPilot: v{}", env!("CARGO_PKG_VERSION"));
+    println!("  • KCPilot: v{}", env!("CARGO_PKG_VERSION"));
     println!("  • Authors: {}", env!("CARGO_PKG_AUTHORS"));
     println!("  • License: {}", env!("CARGO_PKG_LICENSE"));
     println!();

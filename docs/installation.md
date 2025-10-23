@@ -4,7 +4,7 @@ title: Installation
 permalink: /installation/
 ---
 
-Multiple ways to install and run KafkaPilot depending on your environment and preferences.
+Multiple ways to install and run KCPilot depending on your environment and preferences.
 
 ## Prerequisites
 
@@ -28,14 +28,14 @@ This method gives you the latest features and allows customization:
 
 ```bash
 # Clone the repository
-git clone https://github.com/softwaremill/kafkapilot.git
-cd kafkapilot
+git clone https://github.com/softwaremill/kcpilot.git
+cd kcpilot
 
 # Build release binary
 cargo build --release
 
 # Binary location
-ls -la target/release/kafkapilot
+ls -la target/release/kcpilot
 
 # Optional: Add to PATH
 echo 'export PATH="$PATH:'$(pwd)'/target/release"' >> ~/.bashrc
@@ -48,14 +48,14 @@ For development or trying the latest changes:
 
 ```bash
 # Clone and run directly
-git clone https://github.com/softwaremill/kafkapilot.git
-cd kafkapilot
+git clone https://github.com/softwaremill/kcpilot.git
+cd kcpilot
 
 # Run without building
-cargo run --bin kafkapilot -- --help
+cargo run --bin kcpilot -- --help
 
 # Run with debug logging
-RUST_LOG=kafkapilot=debug cargo run --bin kafkapilot -- scan --bastion kafka-prod --broker kafka-poligon-dc1-1.c.sml-sandbox.internal:9092
+RUST_LOG=kcpilot=debug cargo run --bin kcpilot -- scan --bastion kafka-prod --broker kafka-poligon-dc1-1.c.sml-sandbox.internal:9092
 ```
 
 ### 3. Future Release Options
@@ -64,21 +64,21 @@ RUST_LOG=kafkapilot=debug cargo run --bin kafkapilot -- scan --bastion kafka-pro
 
 ```bash
 # Coming soon: Binary releases
-curl -L https://github.com/softwaremill/kafkapilot/releases/latest/download/kafkapilot-linux-x64 -o kafkapilot
-chmod +x kafkapilot
+curl -L https://github.com/softwaremill/kcpilot/releases/latest/download/kcpilot-linux-x64 -o kcpilot
+chmod +x kcpilot
 
 # Coming soon: Homebrew (macOS)
-brew install softwaremill/tap/kafkapilot
+brew install softwaremill/tap/kcpilot
 
 # Coming soon: Cargo install
-cargo install kafkapilot
+cargo install kcpilot
 ```
 
 ## Configuration
 
 ### SSH Configuration
 
-KafkaPilot relies on your SSH configuration for accessing bastion hosts. Configure your `~/.ssh/config`:
+KCPilot relies on your SSH configuration for accessing bastion hosts. Configure your `~/.ssh/config`:
 
 ```bash
 # Example SSH configuration
@@ -129,10 +129,10 @@ export OPENAI_API_KEY=your_openai_api_key_here
 # Alternative: export LLM_API_KEY=your_alternative_llm_api_key
 
 # Default output directory (optional)
-export KAFKAPILOT_OUTPUT_DIR=/home/user/kafka-diagnostics
+export KCPILOT_OUTPUT_DIR=/home/user/kafka-diagnostics
 
 # Logging level (optional)
-export RUST_LOG=kafkapilot=info
+export RUST_LOG=kcpilot=info
 
 # LLM debugging (optional)
 export LLM_DEBUG=true
@@ -144,8 +144,8 @@ export LLM_DEBUG=true
 
 ```bash
 # Check version and basic functionality
-kafkapilot --version
-kafkapilot --help
+kcpilot --version
+kcpilot --help
 
 ```
 
@@ -153,7 +153,7 @@ kafkapilot --help
 
 ```bash
 # Simple local test (if running on bastion)
-kafkapilot scan --broker kafka-poligon-dc1-1.c.sml-sandbox.internal:9092 --output test-installation
+kcpilot scan --broker kafka-poligon-dc1-1.c.sml-sandbox.internal:9092 --output test-installation
 
 # Verify output structure
 ls -la test-installation/
@@ -161,4 +161,4 @@ cat test-installation/COLLECTION_SUMMARY.md
 ```
 ---
 
-**Need help?** Check our [support options](https://softwaremill.com/services/apache-kafka-services/) or [report an issue](https://github.com/softwaremill/kafkapilot/issues).
+**Need help?** Check our [support options](https://softwaremill.com/services/apache-kafka-services/) or [report an issue](https://github.com/softwaremill/kcpilot/issues).

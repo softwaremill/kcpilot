@@ -1,18 +1,18 @@
 [package]
-name = "kafkapilot"
+name = "kcpilot"
 version = "0.1.0"
 edition = "2021"
 authors = ["SoftwareMill <hello@softwaremill.com>"]
 description = "Kafka cluster health diagnostics and remediation tool"
-repository = "https://github.com/softwaremill/kafkapilot"
+repository = "https://github.com/softwaremill/kcpilot"
 license = "Apache-2.0"
 
 [lib]
-name = "kafkapilot"
+name = "kcpilot"
 path = "src/lib.rs"
 
 [[bin]]
-name = "kafkapilot"
+name = "kcpilot"
 path = "src/main.rs"
 
 [dependencies]
