@@ -1,6 +1,6 @@
 # KCPilot
 
-A CLI-first Kafka Cluster health diagnostics tool that automatically collects cluster signals, identifies issues, and provides actionable remediation guidance. KCPilot combines SSH-based data collection with AI-powered analysis using LLM integration.
+A CLI-first Apache Kafka® cluster health diagnostics tool that automatically collects cluster signals, identifies issues, and provides actionable remediation guidance. KCPilot combines SSH-based data collection with AI-powered analysis using LLM integration.
 
 > ⚠️ **Innovation Hub Project**: This project is part of SoftwareMill's Innovation Hub and is currently in MVP stage. While functional, it may contain bugs and has significant room for improvement. We welcome feedback and contributions!
 >

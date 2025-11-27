@@ -5,7 +5,7 @@ title: KCPilot
 
 # KCPilot
 
-**CLI-first Kafka health diagnostics tool for production environments**
+**CLI-first Apache Kafka® health diagnostics tool for production environments**
 
 > ⚠️ **Innovation Hub Project**: This project is part of SoftwareMill's Innovation Hub and is currently in MVP stage. While functional, it may contain bugs and has significant room for improvement. We welcome feedback and contributions!
 > 
